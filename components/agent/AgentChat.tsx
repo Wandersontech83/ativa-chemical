@@ -140,8 +140,8 @@ function Bubble({ msg }: { msg: Message }) {
           <Bot size={13} className="text-white" />
         </div>
       )}
-      <div className={cn('max-w-[82%] space-y-1.5', isUser && 'items-end flex flex-col')}>
-        <div className={cn('rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap', isUser ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-tr-sm' : 'bg-slate-100 text-slate-800 rounded-tl-sm')}>
+      <div className={cn('max-w-[82%] min-w-0 space-y-1.5', isUser && 'items-end flex flex-col')}>
+        <div className={cn('rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words overflow-wrap-anywhere', isUser ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-tr-sm' : 'bg-slate-100 text-slate-800 rounded-tl-sm')}>
           {clean || msg.content}
         </div>
         {action && docNum && (
