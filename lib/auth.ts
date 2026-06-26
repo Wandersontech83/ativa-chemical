@@ -43,7 +43,7 @@ export async function authenticateUser(
 ): Promise<User | null> {
   // Demo: aceita qualquer senha para os usuários demo
   const demoUsers: Record<string, User> = {
-    'admin@ativachemical.com.br': { id: '11111111-1111-1111-1111-111111111111', email: 'admin@ativachemical.com.br', name: 'Carlos Mendes', role: 'admin' },
+    'admin@ativachemical.com.br': { id: '11111111-1111-1111-1111-111111111111', email: 'admin@ativachemical.com.br', name: 'Wanderson Lima', role: 'admin' },
     'gestor@ativachemical.com.br': { id: '22222222-2222-2222-2222-222222222222', email: 'gestor@ativachemical.com.br', name: 'Ana Rodrigues', role: 'gestor' },
     'analista@ativachemical.com.br': { id: '33333333-3333-3333-3333-333333333333', email: 'analista@ativachemical.com.br', name: 'Lucas Ferreira', role: 'analista' },
   }

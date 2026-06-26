@@ -1,190 +1,114 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { formatCurrency, formatDate, formatNumber, STATUS_LABELS, STATUS_COLORS, cn } from '@/lib/utils'
-import { Plus, Search, FileText, TrendingUp, Clock, CheckCircle, XCircle } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState, useEffect } from 'react'
+import { formatCurrency, cn } from '@/lib/utils'
+import { Plus, Search, Pencil, Trash2, FileText, CheckCircle, XCircle, Clock } from 'lucide-react'
+import Modal from '@/components/ui/Modal'
+import { loadData, saveData, genId } from '@/lib/storage'
 
-const DEMO_PROPOSTAS = [
-  {
-    id: 'prop-001', numero: 'PROP-2024-001', cliente: 'Plastinova Indústria de Plásticos Ltda',
-    status: 'aprovada', total: 50400, margem_percentual: 38.5,
-    validade: '2024-07-15', data_envio: '2024-06-11', condicoes_pagamento: '30/60 dias',
-    usuario: 'Ana Rodrigues',
-  },
-  {
-    id: 'prop-002', numero: 'PROP-2024-002', cliente: 'ColorMax Tintas e Vernizes S.A.',
-    status: 'enviada', total: 31920, margem_percentual: 32.0,
-    validade: '2024-07-20', data_envio: '2024-06-18', condicoes_pagamento: '30 dias',
-    usuario: 'Ana Rodrigues',
-  },
-  {
-    id: 'prop-003', numero: 'PROP-2024-003', cliente: 'Flexibor Elastômeros Ltda',
-    status: 'rascunho', total: 17696, margem_percentual: 41.0,
-    validade: '2024-07-25', data_envio: null, condicoes_pagamento: 'À vista',
-    usuario: 'Lucas Ferreira',
-  },
-  {
-    id: 'prop-004', numero: 'PROP-2024-004', cliente: 'AgroQuim Sul Ltda',
-    status: 'rejeitada', total: 35840, margem_percentual: 28.0,
-    validade: '2024-06-30', data_envio: '2024-06-01', condicoes_pagamento: '30 dias',
-    usuario: 'Ana Rodrigues',
-  },
-  {
-    id: 'prop-005', numero: 'PROP-2024-005', cliente: 'AutoPrime Revestimentos Automotivos',
-    status: 'enviada', total: 75600, margem_percentual: 35.5,
-    validade: '2024-07-18', data_envio: '2024-06-23', condicoes_pagamento: '30/60/90 dias',
-    usuario: 'Ana Rodrigues',
-  },
-]
+interface ItemProposta { produto: string; quantidade: number; preco_unitario: number }
 
-const STATUS_ICONS: Record<string, typeof CheckCircle> = {
-  aprovada: CheckCircle,
-  rejeitada: XCircle,
-  enviada: Clock,
-  rascunho: FileText,
-  expirada: XCircle,
+interface Proposta {
+  id: string; numero: string; cliente: string; data: string; validade: string
+  status: 'rascunho' | 'enviada' | 'aprovada' | 'recusada' | 'expirada'
+  itens: ItemProposta[]; observacoes: string; responsavel: string
 }
 
+const SEED: Proposta[] = [
+  { id: 'prop-001', numero: 'PROP-2024-001', cliente: 'Nordeste Química Ltda', data: '2024-11-01', validade: '2024-11-15', status: 'aprovada', itens: [{produto: 'Acetona Industrial 99,5%', quantidade: 500, preco_unitario: 6.80},{produto: 'Tolueno Industrial', quantidade: 300, preco_unitario: 7.90}], observacoes: 'Entrega em 10 dias úteis', responsavel: 'Wanderson Lima' },
+  { id: 'prop-002', numero: 'PROP-2024-002', cliente: 'IndTex Plásticos SA', data: '2024-11-10', validade: '2024-11-24', status: 'enviada', itens: [{produto: 'Ftalato de Dioctila (DOP)', quantidade: 1000, preco_unitario: 14.90}], observacoes: 'Frete CIF incluso', responsavel: 'Wanderson Lima' },
+  { id: 'prop-003', numero: 'PROP-2024-003', cliente: 'PetroSul Derivados', data: '2024-11-15', validade: '2024-11-29', status: 'rascunho', itens: [{produto: 'Resina Epóxi Bisfenol A', quantidade: 200, preco_unitario: 28.00}], observacoes: '', responsavel: 'Wanderson Lima' },
+  { id: 'prop-004', numero: 'PROP-2024-004', cliente: 'Agroquim Nordeste', data: '2024-10-20', validade: '2024-11-03', status: 'expirada', itens: [{produto: 'Dióxido de Titânio R-902', quantidade: 100, preco_unitario: 43.00}], observacoes: 'Aguardando retorno', responsavel: 'Wanderson Lima' },
+]
+
+const EMPTY: Omit<Proposta,'id'> = {
+  numero: '', cliente: '', data: new Date().toISOString().split('T')[0],
+  validade: new Date(Date.now() + 14*86400000).toISOString().split('T')[0],
+  status: 'rascunho', itens: [{produto:'', quantidade:1, preco_unitario:0}], observacoes: '', responsavel: 'Wanderson Lima'
+}
+
+const STATUS_CONFIG = {
+  rascunho: { label: 'Rascunho', color: 'bg-slate-100 text-slate-600', icon: <Clock size={12}/> },
+  enviada: { label: 'Enviada', color: 'bg-blue-100 text-blue-700', icon: <FileText size={12}/> },
+  aprovada: { label: 'Aprovada', color: 'bg-emerald-100 text-emerald-700', icon: <CheckCircle size={12}/> },
+  recusada: { label: 'Recusada', color: 'bg-red-100 text-red-700', icon: <XCircle size={12}/> },
+  expirada: { label: 'Expirada', color: 'bg-amber-100 text-amber-700', icon: <Clock size={12}/> },
+}
+
+const total = (itens: ItemProposta[]) => itens.reduce((s, i) => s + i.quantidade * i.preco_unitario, 0)
+
 export default function PropostasPage() {
+  const [propostas, setPropostas] = useState<Proposta[]>([])
   const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState('todos')
+  const [modal, setModal] = useState(false)
+  const [editing, setEditing] = useState<Proposta | null>(null)
+  const [form, setForm] = useState<Omit<Proposta,'id'>>(EMPTY)
+  const [deleteId, setDeleteId] = useState<string|null>(null)
 
-  const filtered = DEMO_PROPOSTAS.filter((p) => {
-    const matchSearch = search === '' ||
-      p.numero.toLowerCase().includes(search.toLowerCase()) ||
-      p.cliente.toLowerCase().includes(search.toLowerCase())
-    const matchStatus = filterStatus === 'todos' || p.status === filterStatus
-    return matchSearch && matchStatus
-  })
+  useEffect(() => { setPropostas(loadData('propostas', SEED)) }, [])
+  const save = (list: Proposta[]) => { setPropostas(list); saveData('propostas', list) }
 
-  const totalEnviadas = DEMO_PROPOSTAS.filter(p => p.status === 'enviada').reduce((s, p) => s + p.total, 0)
-  const totalAprovadas = DEMO_PROPOSTAS.filter(p => p.status === 'aprovada').reduce((s, p) => s + p.total, 0)
+  const openCreate = () => {
+    const n = `PROP-${new Date().getFullYear()}-${String(propostas.length + 1).padStart(3,'0')}`
+    setEditing(null); setForm({...EMPTY, numero: n}); setModal(true)
+  }
+  const openEdit = (p: Proposta) => { setEditing(p); setForm({...p, itens: [...p.itens]}); setModal(true) }
 
-  async function handleAprovar(id: string, numero: string) {
-    toast.promise(
-      fetch(`/api/propostas/${id}/aprovar`, { method: 'POST' }).then(r => r.json()),
-      {
-        loading: `Aprovando ${numero}...`,
-        success: 'Proposta aprovada! Pedido de venda criado.',
-        error: 'Erro ao aprovar proposta',
-      }
-    )
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editing) save(propostas.map(p => p.id === editing.id ? {...form, id: editing.id} : p))
+    else save([...propostas, { ...form, id: genId('prop') }])
+    setModal(false)
   }
 
+  const f = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>) =>
+    setForm(prev => ({ ...prev, [field]: e.target.value }))
+
+  const addItem = () => setForm(prev => ({ ...prev, itens: [...prev.itens, {produto:'', quantidade:1, preco_unitario:0}] }))
+  const removeItem = (i: number) => setForm(prev => ({ ...prev, itens: prev.itens.filter((_,idx) => idx !== i) }))
+  const updateItem = (i: number, field: keyof ItemProposta, val: string) =>
+    setForm(prev => ({ ...prev, itens: prev.itens.map((it, idx) => idx === i ? {...it, [field]: field === 'produto' ? val : Number(val)} : it) }))
+
+  const filtered = propostas.filter(p => !search ||
+    p.numero.toLowerCase().includes(search.toLowerCase()) || p.cliente.toLowerCase().includes(search.toLowerCase())
+  )
+
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-5 animate-fade-up">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Propostas Comerciais</h1>
-          <p className="text-slate-500 text-sm mt-0.5">{DEMO_PROPOSTAS.length} propostas · Em negociação: {formatCurrency(totalEnviadas)}</p>
+          <p className="text-slate-500 text-sm mt-0.5">{propostas.filter(p=>p.status==='enviada').length} aguardando resposta</p>
         </div>
-        <Link href="/dashboard/crm/propostas/nova" className="btn-primary">
-          <Plus size={16} /> Nova Proposta
-        </Link>
+        <button onClick={openCreate} className="btn-primary"><Plus size={16}/>Nova Proposta</button>
       </div>
 
-      {/* KPIs resumo */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Em Negociação', value: formatCurrency(totalEnviadas), color: 'text-blue-600', bg: 'bg-blue-50', count: DEMO_PROPOSTAS.filter(p => p.status === 'enviada').length },
-          { label: 'Aprovadas', value: formatCurrency(totalAprovadas), color: 'text-emerald-600', bg: 'bg-emerald-50', count: DEMO_PROPOSTAS.filter(p => p.status === 'aprovada').length },
-          { label: 'Rascunhos', value: `${DEMO_PROPOSTAS.filter(p => p.status === 'rascunho').length} proposta(s)`, color: 'text-slate-600', bg: 'bg-slate-50', count: null },
-          { label: 'Margem Média', value: `${formatNumber(DEMO_PROPOSTAS.reduce((s, p) => s + p.margem_percentual, 0) / DEMO_PROPOSTAS.length, 1)}%`, color: 'text-primary-600', bg: 'bg-primary-50', count: null },
-        ].map((k) => (
-          <div key={k.label} className={cn('rounded-xl p-4', k.bg)}>
-            <div className={cn('text-lg font-bold', k.color)}>{k.value}</div>
-            <div className="text-xs text-slate-500 mt-0.5">{k.label}</div>
-          </div>
-        ))}
+      <div className="relative max-w-sm">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Número ou cliente..." className="form-input pl-9 py-1.5"/>
       </div>
 
-      {/* Filtros */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar proposta ou cliente..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="form-input pl-9 py-1.5 w-64"
-          />
-        </div>
-        <div className="flex gap-1">
-          {['todos', 'rascunho', 'enviada', 'aprovada', 'rejeitada'].map((s) => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className={cn('px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
-                filterStatus === s ? 'bg-primary-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              )}
-            >
-              {s === 'todos' ? 'Todas' : STATUS_LABELS[s]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tabela */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <table className="data-table">
-          <thead>
-            <tr>
-              <th>Número</th>
-              <th>Cliente</th>
-              <th>Status</th>
-              <th className="text-right">Total</th>
-              <th className="text-right">Margem</th>
-              <th>Validade</th>
-              <th>Responsável</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>Nº Proposta</th><th>Cliente</th><th>Data</th><th>Validade</th><th className="text-right">Total</th><th>Status</th><th></th>
+          </tr></thead>
           <tbody>
-            {filtered.map((p) => {
-              const StatusIcon = STATUS_ICONS[p.status] || FileText
+            {filtered.length === 0 && <tr><td colSpan={7} className="text-center text-slate-400 py-8">Nenhuma proposta encontrada</td></tr>}
+            {filtered.map(p => {
+              const cfg = STATUS_CONFIG[p.status]
               return (
                 <tr key={p.id}>
-                  <td className="font-mono text-xs font-semibold text-primary-700">{p.numero}</td>
+                  <td className="font-mono text-xs font-semibold text-cyan-700">{p.numero}</td>
+                  <td className="font-medium text-slate-800">{p.cliente}</td>
+                  <td className="text-slate-500 text-sm">{new Date(p.data).toLocaleDateString('pt-BR')}</td>
+                  <td className="text-slate-500 text-sm">{new Date(p.validade).toLocaleDateString('pt-BR')}</td>
+                  <td className="text-right font-semibold text-slate-800">{formatCurrency(total(p.itens))}</td>
+                  <td><span className={cn('inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full', cfg.color)}>{cfg.icon}{cfg.label}</span></td>
                   <td>
-                    <div className="font-medium text-slate-800 text-sm">{p.cliente}</div>
-                    <div className="text-xs text-slate-400">{p.condicoes_pagamento}</div>
-                  </td>
-                  <td>
-                    <span className={cn('badge flex items-center gap-1 w-fit', STATUS_COLORS[p.status])}>
-                      <StatusIcon size={10} />
-                      {STATUS_LABELS[p.status]}
-                    </span>
-                  </td>
-                  <td className="text-right font-semibold text-slate-800">{formatCurrency(p.total)}</td>
-                  <td className="text-right">
-                    <span className={cn('text-sm font-medium',
-                      p.margem_percentual >= 35 ? 'text-emerald-600' :
-                      p.margem_percentual >= 25 ? 'text-yellow-600' : 'text-red-600'
-                    )}>
-                      {formatNumber(p.margem_percentual, 1)}%
-                    </span>
-                  </td>
-                  <td className="text-sm text-slate-500">{formatDate(p.validade)}</td>
-                  <td className="text-sm text-slate-500">{p.usuario}</td>
-                  <td>
-                    <div className="flex items-center gap-1">
-                      <button className="btn-ghost py-1 px-2 text-xs">Ver</button>
-                      {p.status === 'rascunho' && (
-                        <button className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium">
-                          Enviar
-                        </button>
-                      )}
-                      {p.status === 'enviada' && (
-                        <button
-                          onClick={() => handleAprovar(p.id, p.numero)}
-                          className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors font-medium"
-                        >
-                          Aprovar
-                        </button>
-                      )}
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors"><Pencil size={14}/></button>
+                      <button onClick={() => setDeleteId(p.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
                     </div>
                   </td>
                 </tr>
@@ -193,6 +117,62 @@ export default function PropostasPage() {
           </tbody>
         </table>
       </div>
+
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? `Editar ${form.numero}` : 'Nova Proposta'} size="xl">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="form-label">Nº da Proposta</label><input value={form.numero} onChange={f('numero')} className="form-input" required/></div>
+            <div><label className="form-label">Status</label>
+              <select value={form.status} onChange={f('status')} className="form-input">
+                {Object.entries(STATUS_CONFIG).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div><label className="form-label">Cliente</label><input value={form.cliente} onChange={f('cliente')} className="form-input" required placeholder="Nome do cliente"/></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="form-label">Data da Proposta</label><input type="date" value={form.data} onChange={f('data')} className="form-input"/></div>
+            <div><label className="form-label">Validade</label><input type="date" value={form.validade} onChange={f('validade')} className="form-input"/></div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="form-label mb-0">Itens da Proposta</label>
+              <button type="button" onClick={addItem} className="text-xs text-cyan-600 hover:underline flex items-center gap-1"><Plus size={12}/>Adicionar item</button>
+            </div>
+            <div className="space-y-2">
+              {form.itens.map((item, i) => (
+                <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-6"><input value={item.produto} onChange={e=>updateItem(i,'produto',e.target.value)} className="form-input" placeholder="Produto"/></div>
+                  <div className="col-span-2"><input type="number" value={item.quantidade} onChange={e=>updateItem(i,'quantidade',e.target.value)} className="form-input" placeholder="Qtd" min="1"/></div>
+                  <div className="col-span-3"><input type="number" step="0.01" value={item.preco_unitario} onChange={e=>updateItem(i,'preco_unitario',e.target.value)} className="form-input" placeholder="R$/un" min="0"/></div>
+                  <div className="col-span-1 flex justify-center">
+                    {form.itens.length > 1 && <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600"><XCircle size={16}/></button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 text-right text-sm font-semibold text-slate-700">
+              Total: {formatCurrency(total(form.itens))}
+            </div>
+          </div>
+
+          <div><label className="form-label">Observações</label>
+            <textarea value={form.observacoes} onChange={f('observacoes')} className="form-input" rows={2} placeholder="Condições de entrega, frete, pagamento..."/>
+          </div>
+          <div className="flex gap-2 justify-end pt-2">
+            <button type="button" onClick={() => setModal(false)} className="btn-secondary">Cancelar</button>
+            <button type="submit" className="btn-primary"><FileText size={16}/>{editing ? 'Salvar' : 'Criar Proposta'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!deleteId} onClose={() => setDeleteId(null)} title="Confirmar exclusão" size="sm">
+        <p className="text-slate-600 mb-5">Excluir esta proposta permanentemente?</p>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => setDeleteId(null)} className="btn-secondary">Cancelar</button>
+          <button onClick={() => { save(propostas.filter(p => p.id !== deleteId)); setDeleteId(null) }} className="btn-danger">Excluir</button>
+        </div>
+      </Modal>
     </div>
   )
 }
