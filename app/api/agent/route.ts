@@ -41,7 +41,7 @@ Responda sempre em português brasileiro. Seja objetivo e profissional. Quando a
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json()
+    const { messages, systemPrompt } = await req.json()
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return NextResponse.json(
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt || SYSTEM_PROMPT,
       messages: messages.map((m: { role: string; content: string }) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
