@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import AgentChat from '@/components/agent/AgentChat'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await getSession()
@@ -18,6 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </main>
         <Footer />
       </div>
+      <AgentChat />
     </div>
   )
 }

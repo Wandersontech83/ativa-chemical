@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Plus, Search, Pencil, Trash2, DollarSign, TrendingDown, CheckCircle, Clock } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, DollarSign, TrendingDown, CheckCircle, Clock, Download } from 'lucide-react'
+import { gerarPDFCompra } from '@/lib/pdf'
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData, genId } from '@/lib/storage'
 
@@ -106,6 +107,7 @@ export default function ComprasPage() {
                   <td><span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', cfg.color)}>{cfg.label}</span></td>
                   <td>
                     <div className="flex gap-1 justify-end">
+                      <button onClick={() => gerarPDFCompra(c)} title="Exportar PDF" className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"><Download size={14}/></button>
                       <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors"><Pencil size={14}/></button>
                       <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
                     </div>
