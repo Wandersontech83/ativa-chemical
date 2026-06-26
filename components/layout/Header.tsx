@@ -21,7 +21,7 @@ export default function Header({ user }: { user: User }) {
       <Ticker />
 
       {/* Header bar */}
-      <header className="h-14 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center px-6 gap-4">
+      <header className="h-14 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center px-6 gap-4 relative z-40">
         {/* Search */}
         <div className="flex-1 max-w-sm">
           <div className="relative">

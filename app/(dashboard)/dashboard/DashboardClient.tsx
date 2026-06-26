@@ -42,11 +42,11 @@ const DEMO_TOP = [
 ]
 
 const DEMO_ALERTS = [
-  { id: '1', tipo: 'proposta_sem_resposta', titulo: 'Proposta PROP-2024-002 sem resposta há 8 dias', prioridade: 'alta', status: 'novo', sugestao_agente: 'Contato direto com Juliana Santos. Margem de 32% — ajuste no prazo pode fechar o negócio.', created_at: new Date(Date.now() - 8*86400000).toISOString(), acao_url: '/dashboard/crm/propostas' },
-  { id: '2', tipo: 'estoque_critico',       titulo: 'Estoque crítico: Acetato de Etila (TC-SOL-006)', prioridade: 'alta', status: 'novo', sugestao_agente: 'Solicitar reposição urgente ao fornecedor GZ Poly. Quantidade sugerida: 500 kg.', created_at: new Date(Date.now() - 2*3600000).toISOString(), acao_url: '/dashboard/estoque' },
-  { id: '3', tipo: 'proposta_sem_resposta', titulo: 'Proposta PROP-2024-005 sem resposta há 3 dias', prioridade: 'alta', status: 'novo', sugestao_agente: 'Maior proposta do mês (R$ 75.600). Desconto de 3-5% pode fechar.', created_at: new Date(Date.now() - 3*86400000).toISOString(), acao_url: '/dashboard/crm/propostas' },
-  { id: '4', tipo: 'pedido_sem_nfe',        titulo: 'Pedido PV-2024-003 aguardando aprovação',       prioridade: 'media', status: 'novo', sugestao_agente: 'Margem 30,1% — acima do mínimo. Estoque ok. Aprovação imediata recomendada.', created_at: new Date(Date.now() - 7200000).toISOString(), acao_url: '/dashboard/crm/pedidos' },
-  { id: '5', tipo: 'contrato_vencendo',     titulo: 'Contrato CT-2024-002 vence em 65 dias',        prioridade: 'media', status: 'lido', sugestao_agente: 'Iniciar renovação agora. Propor +15% volume e +8% preço (IGP-M acumulado).', created_at: new Date(Date.now() - 86400000).toISOString(), acao_url: '/dashboard/contratos' },
+  { id: '1', tipo: 'proposta_sem_resposta', titulo: 'Proposta PROP-2024-002 sem resposta há 8 dias', prioridade: 'alta', status: 'novo', sugestao_agente: 'Contato direto com Juliana Santos. Margem de 32% — ajuste no prazo pode fechar o negócio.', created_at: new Date(Date.now() - 8*86400000).toISOString(), acao_url: '/crm/propostas' },
+  { id: '2', tipo: 'estoque_critico',       titulo: 'Estoque crítico: Acetato de Etila (TC-SOL-006)', prioridade: 'alta', status: 'novo', sugestao_agente: 'Solicitar reposição urgente ao fornecedor GZ Poly. Quantidade sugerida: 500 kg.', created_at: new Date(Date.now() - 2*3600000).toISOString(), acao_url: '/estoque' },
+  { id: '3', tipo: 'proposta_sem_resposta', titulo: 'Proposta PROP-2024-005 sem resposta há 3 dias', prioridade: 'alta', status: 'novo', sugestao_agente: 'Maior proposta do mês (R$ 75.600). Desconto de 3-5% pode fechar.', created_at: new Date(Date.now() - 3*86400000).toISOString(), acao_url: '/crm/propostas' },
+  { id: '4', tipo: 'pedido_sem_nfe',        titulo: 'Pedido PV-2024-003 aguardando aprovação',       prioridade: 'media', status: 'novo', sugestao_agente: 'Margem 30,1% — acima do mínimo. Estoque ok. Aprovação imediata recomendada.', created_at: new Date(Date.now() - 7200000).toISOString(), acao_url: '/crm/pedidos' },
+  { id: '5', tipo: 'contrato_vencendo',     titulo: 'Contrato CT-2024-002 vence em 65 dias',        prioridade: 'media', status: 'lido', sugestao_agente: 'Iniciar renovação agora. Propor +15% volume e +8% preço (IGP-M acumulado).', created_at: new Date(Date.now() - 86400000).toISOString(), acao_url: '/contratos' },
 ]
 
 const ALERT_EMOJI: Record<string, string> = {
@@ -95,7 +95,7 @@ export default function DashboardClient({ data }: { data: any }) {
       gradient: 'from-sky-400 to-cyan-400',
       bg: 'bg-sky-50',
       iconColor: 'text-sky-600',
-      href: '/dashboard/faturamento',
+      href: '/faturamento',
       delay: 'animate-fade-up-1',
     },
     {
@@ -107,7 +107,7 @@ export default function DashboardClient({ data }: { data: any }) {
       gradient: 'from-emerald-400 to-teal-400',
       bg: 'bg-emerald-50',
       iconColor: 'text-emerald-600',
-      href: '/dashboard/compras',
+      href: '/compras',
       delay: 'animate-fade-up-2',
     },
     {
@@ -119,7 +119,7 @@ export default function DashboardClient({ data }: { data: any }) {
       gradient: 'from-violet-400 to-indigo-400',
       bg: 'bg-violet-50',
       iconColor: 'text-violet-600',
-      href: '/dashboard/crm/pedidos',
+      href: '/crm/pedidos',
       delay: 'animate-fade-up-3',
     },
     {
@@ -316,10 +316,10 @@ export default function DashboardClient({ data }: { data: any }) {
       {/* Atalhos rápidos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Nova Proposta',   icon: FileText,     href: '/dashboard/crm/propostas', from: '#0ea5e9', to: '#6366f1' },
-          { label: 'Entrada NF-e',    icon: Package,      href: '/dashboard/estoque',       from: '#10b981', to: '#0ea5e9' },
-          { label: 'Emitir NF-e',     icon: FileText,     href: '/dashboard/faturamento',   from: '#6366f1', to: '#8b5cf6' },
-          { label: 'Rastrear Pedido', icon: Truck,        href: '/dashboard/logistica',     from: '#f59e0b', to: '#ef4444' },
+          { label: 'Nova Proposta',   icon: FileText,     href: '/crm/propostas', from: '#0ea5e9', to: '#6366f1' },
+          { label: 'Entrada NF-e',    icon: Package,      href: '/estoque',       from: '#10b981', to: '#0ea5e9' },
+          { label: 'Emitir NF-e',     icon: FileText,     href: '/faturamento',   from: '#6366f1', to: '#8b5cf6' },
+          { label: 'Rastrear Pedido', icon: Truck,        href: '/logistica',     from: '#f59e0b', to: '#ef4444' },
         ].map((item) => {
           const Icon = item.icon
           return (
