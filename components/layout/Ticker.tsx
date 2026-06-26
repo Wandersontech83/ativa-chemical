@@ -21,7 +21,7 @@ const DEMO_ITEMS: TickerItem[] = [
   { icon: <Users size={12} />,         label: 'Clientes Ativos',        value: '10 cadastrados', color: 'text-sky-400' },
   { icon: <Package size={12} />,       label: 'Contrato CT-2024-002',   value: 'Vence em 65 dias – ColorMax', color: 'text-violet-400', highlight: true },
   { icon: <DollarSign size={12} />,    label: 'Lucro Líquido Junho',    value: 'R$ 18.888',      color: 'text-emerald-400' },
-  { icon: <ShoppingCart size={12} />,  label: 'PV-2024-002 em Trânsito','value': 'Nordeste Química – Entrega em 3 dias', value: 'Nordeste Química', color: 'text-sky-400' },
+  { icon: <ShoppingCart size={12} />,  label: 'PV-2024-002 em Trânsito', value: 'Nordeste Química – Entrega em 3 dias', color: 'text-sky-400' },
   { icon: <AlertTriangle size={12} />, label: 'Acetato de Etila',       value: 'Estoque 95 kg / mínimo 200 kg', color: 'text-red-400', highlight: true },
   { icon: <TrendingUp size={12} />,    label: 'Meta Mensal',            value: '87% atingida',   color: 'text-emerald-400' },
 ]
