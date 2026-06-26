@@ -129,6 +129,39 @@ function executeAction(action: any): string {
   return ''
 }
 
+function renderMd(text: string) {
+  // Converte markdown simples para JSX
+  return text.split('\n').map((line, i) => {
+    // Linha de tabela
+    if (line.startsWith('|')) {
+      const cols = line.split('|').filter(c => c.trim() !== '')
+      const isSep = cols.every(c => /^[-: ]+$/.test(c))
+      if (isSep) return null
+      return (
+        <div key={i} className="flex gap-1 text-xs">
+          {cols.map((c, j) => (
+            <span key={j} className="flex-1 px-1 py-0.5 bg-white/20 rounded truncate" dangerouslySetInnerHTML={{ __html: c.trim().replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+          ))}
+        </div>
+      )
+    }
+    // Linha vazia
+    if (!line.trim()) return <div key={i} className="h-1" />
+    // Bullet
+    if (line.startsWith('- ') || line.startsWith('• ')) {
+      const content = line.replace(/^[-•] /, '')
+      return <div key={i} className="flex gap-1.5 text-sm"><span className="opacity-60 flex-shrink-0">•</span><span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} /></div>
+    }
+    // Numerado
+    if (/^\d+\. /.test(line)) {
+      const [num, ...rest] = line.split('. ')
+      return <div key={i} className="flex gap-1.5 text-sm"><span className="opacity-60 flex-shrink-0 font-bold">{num}.</span><span dangerouslySetInnerHTML={{ __html: rest.join('. ').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} /></div>
+    }
+    // Normal com bold
+    return <p key={i} className="text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+  }).filter(Boolean)
+}
+
 function Bubble({ msg }: { msg: Message }) {
   const { clean, action } = parseAction(msg.content)
   const docNum = action ? executeAction(action) : null
@@ -141,8 +174,8 @@ function Bubble({ msg }: { msg: Message }) {
         </div>
       )}
       <div className={cn('max-w-[82%] min-w-0 space-y-1.5', isUser && 'items-end flex flex-col')}>
-        <div className={cn('rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed break-words overflow-wrap-anywhere', isUser ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-tr-sm' : 'bg-slate-100 text-slate-800 rounded-tl-sm')}>
-          {clean || msg.content}
+        <div className={cn('rounded-2xl px-3.5 py-2.5 space-y-0.5 break-words', isUser ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-tr-sm' : 'bg-slate-100 text-slate-800 rounded-tl-sm')}>
+          {isUser ? <p className="text-sm leading-relaxed">{clean || msg.content}</p> : renderMd(clean || msg.content)}
         </div>
         {action && docNum && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs">
@@ -218,7 +251,7 @@ export default function AgentChat() {
       )}
 
       {open && (
-        <div className={cn('fixed right-6 z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col transition-all duration-200', minimized ? 'bottom-6 w-72 h-14' : 'bottom-6 w-[400px] h-[600px]')}>
+        <div className={cn('fixed right-4 z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col transition-all duration-200', minimized ? 'bottom-4 w-72 h-14' : 'bottom-4 w-[380px]')} style={minimized ? {} : { height: 'min(600px, calc(100vh - 24px))', maxHeight: 'calc(100vh - 24px)' }}>
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-t-2xl flex-shrink-0" style={{ background: 'linear-gradient(135deg, #0c1829, #162035)' }}>
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
