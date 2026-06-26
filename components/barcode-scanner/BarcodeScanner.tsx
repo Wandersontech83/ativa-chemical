@@ -21,8 +21,9 @@ export default function BarcodeScanner({ onRead, onClose }: BarcodeScannerProps)
     async function startScanner() {
       try {
         setScanning(true)
-        const { BrowserBarcodeReader } = await import('@zxing/browser')
-        codeReader = new BrowserBarcodeReader()
+        const zxing = await import('@zxing/browser')
+        const Reader = zxing.BrowserMultiFormatReader || (zxing as any).BrowserBarcodeReader
+        codeReader = new Reader()
 
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment', width: 640, height: 480 },
