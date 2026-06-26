@@ -15,38 +15,38 @@ import { toast } from 'sonner'
 const navSections = [
   {
     items: [
-      { href: '/dashboard',                  icon: LayoutDashboard, label: 'Dashboard',         roles: ['admin','gestor','analista'] },
+      { href: '/dashboard',        icon: LayoutDashboard, label: 'Dashboard',         roles: ['admin','gestor','analista'] },
     ],
   },
   {
     label: 'Operações',
     items: [
-      { href: '/dashboard/estoque',          icon: Package,         label: 'Estoque',            roles: ['admin','gestor','analista'] },
-      { href: '/dashboard/produtos',         icon: Package,         label: 'Produtos',           roles: ['admin','gestor','analista'] },
-      { href: '/dashboard/clientes',         icon: Users,           label: 'Clientes',           roles: ['admin','gestor','analista'] },
-      { href: '/dashboard/fornecedores',     icon: Building2,       label: 'Fornecedores',       roles: ['admin','gestor'] },
+      { href: '/estoque',          icon: Package,         label: 'Estoque',            roles: ['admin','gestor','analista'] },
+      { href: '/produtos',         icon: Package,         label: 'Produtos',           roles: ['admin','gestor','analista'] },
+      { href: '/clientes',         icon: Users,           label: 'Clientes',           roles: ['admin','gestor','analista'] },
+      { href: '/fornecedores',     icon: Building2,       label: 'Fornecedores',       roles: ['admin','gestor'] },
     ],
   },
   {
     label: 'CRM & Vendas',
     items: [
-      { href: '/dashboard/crm/propostas',    icon: TrendingUp,      label: 'Propostas',          roles: ['admin','gestor','analista'] },
-      { href: '/dashboard/crm/pedidos',      icon: ShoppingCart,    label: 'Pedidos de Venda',   roles: ['admin','gestor','analista'] },
-      { href: '/dashboard/faturamento',      icon: FileText,        label: 'Faturamento (NF-e)', roles: ['admin','gestor'] },
-      { href: '/dashboard/logistica',        icon: Truck,           label: 'Logística',          roles: ['admin','gestor','analista'] },
+      { href: '/crm/propostas',    icon: TrendingUp,      label: 'Propostas',          roles: ['admin','gestor','analista'] },
+      { href: '/crm/pedidos',      icon: ShoppingCart,    label: 'Pedidos de Venda',   roles: ['admin','gestor','analista'] },
+      { href: '/faturamento',      icon: FileText,        label: 'Faturamento (NF-e)', roles: ['admin','gestor'] },
+      { href: '/logistica',        icon: Truck,           label: 'Logística',          roles: ['admin','gestor','analista'] },
     ],
   },
   {
     label: 'Financeiro',
     items: [
-      { href: '/dashboard/compras',          icon: ShoppingCart,    label: 'Compras / Despesas', roles: ['admin','gestor'] },
-      { href: '/dashboard/contratos',        icon: ScrollText,      label: 'Contratos',          roles: ['admin','gestor'] },
+      { href: '/compras',          icon: ShoppingCart,    label: 'Compras / Despesas', roles: ['admin','gestor'] },
+      { href: '/contratos',        icon: ScrollText,      label: 'Contratos',          roles: ['admin','gestor'] },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { href: '/dashboard/configuracoes',    icon: Settings,        label: 'Configurações',      roles: ['admin'] },
+      { href: '/configuracoes',    icon: Settings,        label: 'Configurações',      roles: ['admin'] },
     ],
   },
 ]
