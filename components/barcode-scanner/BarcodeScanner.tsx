@@ -14,7 +14,8 @@ export default function BarcodeScanner({ onRead, onClose }: BarcodeScannerProps)
   const [scanning, setScanning] = useState(false)
 
   useEffect(() => {
-    let codeReader: import('@zxing/browser').BrowserBarcodeReader | null = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let codeReader: any = null
     let stream: MediaStream | null = null
 
     async function startScanner() {
