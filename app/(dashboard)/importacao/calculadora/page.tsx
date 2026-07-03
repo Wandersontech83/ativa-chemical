@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calculator, DollarSign, TrendingUp, Save, FileDown, RefreshCw, AlertCircle, ChevronDown } from 'lucide-react'
+import { Calculator, DollarSign, TrendingUp, Save, FileDown, RefreshCw, AlertCircle, ChevronDown, Printer } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { saveData, loadData, genId } from '@/lib/storage'
 
@@ -98,6 +98,90 @@ export default function CalculadoraImportacaoPage() {
     const margem = preco_venda > 0 ? ((preco_venda - custo_unitario) / preco_venda) * 100 : 0
 
     setCalc({ va, ii, ipi, pis, cofins, icms, afrmm, siscomex: Number(siscomex), frete_interno: freteInterno, despachante, total, custo_unitario, preco_venda, margem })
+  }
+
+  async function exportarPDF() {
+    if (!calc) return
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF()
+
+    // Cabeçalho
+    doc.setFillColor(12, 24, 41)
+    doc.rect(0, 0, 210, 30, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.text('ATIVA CHEMICAL', 14, 13)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Simulação de Custo de Importação', 14, 21)
+    doc.setFontSize(9)
+    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}`, 14, 27)
+
+    // Info do produto
+    doc.setTextColor(30, 41, 59)
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Parâmetros da Simulação', 14, 42)
+    autoTable(doc, {
+      startY: 46,
+      head: [['Campo', 'Valor']],
+      body: [
+        ['Produto', produto.nome],
+        ['NCM', produto.ncm],
+        ['Valor FOB', `${moeda} ${precoUnitario.toLocaleString('pt-BR')}`],
+        ['Câmbio', `${cambio[moeda].toFixed(4)} BRL/${moeda}`],
+        ['Quantidade', `${quantidade.toLocaleString('pt-BR')} kg`],
+        ['Incoterm', incoterm],
+        ['Modal', modal === 'maritimo' ? 'Marítimo' : 'Aéreo'],
+        ['UF Destino', ufDestino],
+        ['Alíquota ICMS', `${ALIQ_ICMS[ufDestino] || 18}% (por dentro)`],
+        ['Créditos recuperáveis', considerarCreditos ? 'Sim' : 'Não'],
+      ],
+      headStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      styles: { fontSize: 9 },
+    })
+
+    // Breakdown de custos
+    const y2 = (doc as any).lastAutoTable.finalY + 10
+    doc.setFontSize(11)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(30, 41, 59)
+    doc.text('Composição do Custo Total', 14, y2)
+    autoTable(doc, {
+      startY: y2 + 4,
+      head: [['Componente', 'Valor (R$)', '% do Total']],
+      body: [
+        ...parcelas.map(p => [p.l, p.v.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), `${((p.v / calc.total) * 100).toFixed(1)}%`]),
+        ['TOTAL', calc.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), '100%'],
+      ],
+      headStyles: { fillColor: [12, 24, 41], textColor: 255, fontStyle: 'bold' },
+      footStyles: { fillColor: [6, 182, 212], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 9 },
+    })
+
+    // Resultado final
+    const y3 = (doc as any).lastAutoTable.finalY + 10
+    doc.setFillColor(6, 182, 212)
+    doc.rect(14, y3, 182, 28, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.text('RESULTADO FINAL', 18, y3 + 8)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.text(`Custo Unitário: R$ ${calc.custo_unitario.toFixed(4)}/kg`, 18, y3 + 15)
+    doc.text(`Preço de Venda (${margemDesejada}% margem): R$ ${calc.preco_venda.toFixed(4)}/kg`, 18, y3 + 21)
+    doc.text(`Custo Total (${quantidade.toLocaleString('pt-BR')} kg): R$ ${calc.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 100, y3 + 15)
+    doc.text(`Margem efetiva: ${calc.margem.toFixed(2)}%`, 100, y3 + 21)
+
+    doc.setTextColor(148, 163, 184)
+    doc.setFontSize(7)
+    doc.text('Este documento é gerado automaticamente pelo sistema Ativa Chemical ERP. Sujeito a variações cambiais e tributárias.', 14, 290)
+
+    doc.save(`simulacao-importacao-${produto.nome.toLowerCase().replace(/\s+/g,'-')}-${new Date().toISOString().split('T')[0]}.pdf`)
   }
 
   function salvarSimulacao() {
@@ -297,11 +381,14 @@ export default function CalculadoraImportacaoPage() {
                 </div>
               </div>
 
-              {/* Salvar */}
+              {/* Salvar / Exportar */}
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
                 <input value={nomeSim} onChange={e => setNomeSim(e.target.value)} placeholder="Nome da simulação (opcional)" className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" />
                 <button onClick={salvarSimulacao} className="w-full py-2 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg,#06b6d4,#2563eb)' }}>
                   <Save size={14} /> Salvar simulação
+                </button>
+                <button onClick={exportarPDF} className="w-full py-2 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
+                  <Printer size={14} /> Exportar PDF
                 </button>
               </div>
             </>

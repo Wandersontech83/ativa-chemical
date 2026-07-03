@@ -5,7 +5,9 @@ import {
   TrendingUp, TrendingDown, Package, ShoppingCart,
   FileText, Truck, Bot, ArrowRight, CheckCircle,
   DollarSign, Percent, AlertTriangle, Zap,
+  MapPin, Target, UserCheck, AlertCircle,
 } from 'lucide-react'
+import { CLIENTES_SEED, PROSPECTS_SEED, VENDEDORES_SEED } from '@/lib/clientes-seed'
 import { formatCurrency, formatNumber, timeAgo, STATUS_COLORS, cn } from '@/lib/utils'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -312,6 +314,87 @@ export default function DashboardClient({ data }: { data: any }) {
           ))}
         </div>
       </div>
+
+      {/* CRM — Módulos Comerciais */}
+      {(() => {
+        const prospects = PROSPECTS_SEED
+        const clientes = CLIENTES_SEED
+        const vendedores = VENDEDORES_SEED
+        const emFunil = prospects.filter(p => !['convertido','perdido'].includes(p.status)).length
+        const semCompra = clientes.filter(c => c.status === 'sem_compra').length
+        const inadimplentes = clientes.filter(c => c.status === 'inadimplente').length
+        const metaTotal = vendedores.reduce((s, v) => s + v.meta_mensal_brl, 0)
+        return (
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-display font-semibold text-slate-800 text-base">CRM Comercial</h2>
+                <p className="text-xs text-slate-400">Visão rápida dos módulos de campo</p>
+              </div>
+              <Link href="/mapa" className="text-xs text-sky-600 hover:text-sky-700 flex items-center gap-1 font-medium">
+                Ver mapa <ArrowRight size={12} />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                {
+                  label: 'Prospects no funil',
+                  value: String(emFunil),
+                  sub: 'de ' + prospects.length + ' abertos',
+                  icon: Target,
+                  href: '/prospeccao',
+                  from: '#7c3aed', to: '#6366f1',
+                  bg: 'bg-violet-50', ic: 'text-violet-600',
+                },
+                {
+                  label: 'Clientes sem compra',
+                  value: String(semCompra + inadimplentes),
+                  sub: `${semCompra} inativos · ${inadimplentes} inadimp.`,
+                  icon: AlertCircle,
+                  href: '/mapa',
+                  from: '#f59e0b', to: '#ef4444',
+                  bg: 'bg-amber-50', ic: 'text-amber-600',
+                },
+                {
+                  label: 'Clientes no mapa',
+                  value: String(clientes.length),
+                  sub: Array.from(new Set(clientes.map(c => c.uf))).length + ' estados cobertos',
+                  icon: MapPin,
+                  href: '/mapa',
+                  from: '#0ea5e9', to: '#06b6d4',
+                  bg: 'bg-sky-50', ic: 'text-sky-600',
+                },
+                {
+                  label: 'Meta mensal equipe',
+                  value: `R$ ${(metaTotal/1000).toFixed(0)}k`,
+                  sub: vendedores.length + ' vendedores ativos',
+                  icon: UserCheck,
+                  href: '/vendedores',
+                  from: '#10b981', to: '#0ea5e9',
+                  bg: 'bg-emerald-50', ic: 'text-emerald-600',
+                },
+              ].map(card => {
+                const Icon = card.icon
+                return (
+                  <Link key={card.label} href={card.href}
+                    className="group bg-white border border-slate-100 rounded-2xl p-4 flex flex-col gap-2 hover:shadow-md transition-all hover:border-slate-200">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${card.bg}`}>
+                      <Icon size={17} className={card.ic} />
+                    </div>
+                    <div className="font-display text-2xl font-bold text-slate-900">{card.value}</div>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-700">{card.label}</div>
+                      <div className="text-[11px] text-slate-400">{card.sub}</div>
+                    </div>
+                    <div className="h-0.5 rounded-full mt-1 opacity-30 group-hover:opacity-60 transition-opacity"
+                      style={{ background: `linear-gradient(90deg, ${card.from}, ${card.to})` }} />
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Atalhos rápidos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

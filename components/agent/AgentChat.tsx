@@ -259,7 +259,7 @@ export default function AgentChat() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-bold">NEXUS Agent</p>
-              {!minimized && <p className="text-cyan-400 text-xs flex items-center gap-1"><Sparkles size={9} />Powered by Claude AI · {modoAtual.emoji} {modoAtual.label}</p>}
+              {!minimized && <p className="text-cyan-400 text-xs flex items-center gap-1"><Sparkles size={9} />NEXUS AI · {modoAtual.emoji} {modoAtual.label}</p>}
             </div>
             <button onClick={() => setMinimized(!minimized)} className="text-slate-400 hover:text-white transition-colors">{minimized ? <Maximize2 size={14} /> : <Minimize2 size={14} />}</button>
             <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-white transition-colors"><X size={14} /></button>

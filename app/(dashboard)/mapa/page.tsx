@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { MapPin, Filter, Route, Users, Navigation, X, Clock, DollarSign, Plus, ChevronRight } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
-import { CLIENTES_SEED } from '@/lib/clientes-seed'
+import { CLIENTES_SEED, PROSPECTS_SEED } from '@/lib/clientes-seed'
 import { loadData } from '@/lib/storage'
 
 type Cliente = typeof CLIENTES_SEED[0]
@@ -71,6 +71,7 @@ export default function MapaPage() {
       }).addTo(map)
       leafletRef.current = { map, L }
       renderMarkers({ map, L }, clientesFiltrados)
+      renderProspects({ map, L })
     })
     // eslint-disable-next-line
   }, [])
@@ -112,6 +113,40 @@ export default function MapaPage() {
 
       markersRef.current.push(marker)
     })
+  }
+
+  const prospectMarkersRef = useRef<any[]>([])
+
+  function renderProspects({ map, L }: any) {
+    prospectMarkersRef.current.forEach(m => m.remove())
+    prospectMarkersRef.current = []
+    const prospects = loadData('prospects', PROSPECTS_SEED)
+    const COR_FUNIL: Record<string, string> = {
+      novo: '#8b5cf6', contatado: '#6366f1', qualificado: '#7c3aed',
+      proposta: '#f59e0b', convertido: '#10b981', perdido: '#94a3b8',
+    }
+    prospects
+      .filter((p: any) => !['convertido', 'perdido'].includes(p.status))
+      .forEach((p: any) => {
+        const cor = COR_FUNIL[p.status] || '#8b5cf6'
+        const icon = L.divIcon({
+          html: `<div style="width:12px;height:12px;background:${cor};border:2px solid white;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.4);transform:rotate(45deg)"></div>`,
+          className: '', iconSize: [12, 12], iconAnchor: [6, 6],
+        })
+        const marker = L.marker([p.lat, p.lng], { icon })
+          .addTo(map)
+          .bindPopup(`
+            <div style="min-width:180px;font-family:sans-serif">
+              <div style="font-weight:700;font-size:12px;color:#1e293b;margin-bottom:3px">${p.nome}</div>
+              <div style="font-size:10px;color:#64748b;margin-bottom:5px">${p.cidade}/${p.uf} · ${p.vendedor}</div>
+              <span style="font-size:9px;background:${cor}20;color:${cor};padding:2px 6px;border-radius:10px;font-weight:700">◆ PROSPECT — ${p.status.toUpperCase()}</span>
+              ${p.produto_alvo ? `<div style="font-size:10px;color:#0891b2;margin-top:5px">🎯 ${p.produto_alvo}</div>` : ''}
+              ${p.observacoes ? `<div style="font-size:10px;color:#475569;margin-top:3px">${p.observacoes}</div>` : ''}
+              <a href="/prospeccao" style="display:inline-block;margin-top:8px;font-size:10px;background:#7c3aed;color:white;padding:3px 8px;border-radius:6px;text-decoration:none">Ver prospecção</a>
+            </div>
+          `)
+        prospectMarkersRef.current.push(marker)
+      })
   }
 
   function toggleSelecionado(id: string) {
@@ -185,13 +220,17 @@ export default function MapaPage() {
         </select>
 
         {/* Legenda */}
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-3 flex-wrap">
           {Object.entries(STATUS_LABEL).map(([k, v]) => (
             <div key={k} className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-full" style={{ background: STATUS_COR[k] }} />
               <span className="text-xs text-slate-500">{v}</span>
             </div>
           ))}
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-sm rotate-45 flex-shrink-0" style={{ background: '#8b5cf6' }} />
+            <span className="text-xs text-slate-500">Prospect funil</span>
+          </div>
         </div>
       </div>
 
