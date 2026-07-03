@@ -7,6 +7,12 @@ const SECRET = new TextEncoder().encode(
   process.env.NEXTAUTH_SECRET || 'ativa_nextauth_secret_2024'
 )
 
+// Rotas que exigem role mínimo — vendedor é bloqueado nestas
+const ROTAS_FINANCEIRO = [
+  '/financeiro', '/compras', '/contratos', '/importacao',
+  '/executivo', '/alertas', '/admin', '/configuracoes', '/vendedores',
+]
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
@@ -20,7 +26,17 @@ export async function middleware(req: NextRequest) {
   }
 
   try {
-    await jwtVerify(token, SECRET)
+    const { payload } = await jwtVerify(token, SECRET)
+    const role = (payload as any).role as string
+
+    // vendedor e comprador não podem acessar rotas financeiras/admin
+    if (['vendedor', 'comprador'].includes(role)) {
+      const bloqueada = ROTAS_FINANCEIRO.some(r => pathname.startsWith(r))
+      if (bloqueada) {
+        return NextResponse.redirect(new URL('/dashboard', req.url))
+      }
+    }
+
     return NextResponse.next()
   } catch {
     const res = NextResponse.redirect(new URL('/login', req.url))

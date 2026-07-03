@@ -10,7 +10,7 @@ export interface User {
   id: string
   email: string
   name: string
-  role: 'admin' | 'gestor' | 'analista'
+  role: 'admin' | 'gestor' | 'analista' | 'vendedor' | 'comprador'
 }
 
 export async function signToken(user: User): Promise<string> {
@@ -42,15 +42,17 @@ export async function authenticateUser(
   password: string
 ): Promise<User | null> {
   // Demo: aceita qualquer senha para os usuários demo
-  const demoUsers: Record<string, User> = {
-    'admin@ativachemical.com.br': { id: '11111111-1111-1111-1111-111111111111', email: 'admin@ativachemical.com.br', name: 'Wanderson Lima', role: 'admin' },
-    'gestor@ativachemical.com.br': { id: '22222222-2222-2222-2222-222222222222', email: 'gestor@ativachemical.com.br', name: 'Ana Rodrigues', role: 'gestor' },
-    'analista@ativachemical.com.br': { id: '33333333-3333-3333-3333-333333333333', email: 'analista@ativachemical.com.br', name: 'Lucas Ferreira', role: 'analista' },
+  const demoUsers: Record<string, { user: User; senha: string }> = {
+    'admin@ativachemical.com.br':       { user: { id: '11111111-1111-1111-1111-111111111111', email: 'admin@ativachemical.com.br',       name: 'Wanderson Lima',    role: 'admin'    }, senha: 'ativa2024'      },
+    'gestor@ativachemical.com.br':      { user: { id: '22222222-2222-2222-2222-222222222222', email: 'gestor@ativachemical.com.br',      name: 'Ana Rodrigues',     role: 'gestor'   }, senha: 'ativa2024'      },
+    'analista@ativachemical.com.br':    { user: { id: '33333333-3333-3333-3333-333333333333', email: 'analista@ativachemical.com.br',    name: 'Lucas Ferreira',    role: 'analista' }, senha: 'ativa2024'      },
+    'fagner.lima@ativachemical.com':    { user: { id: '44444444-4444-4444-4444-444444444444', email: 'fagner.lima@ativachemical.com',    name: 'Fagner Lima',       role: 'gestor'   }, senha: 'Fagner@2024'    },
+    'reginaldo.alves@ativachemical.com':{ user: { id: '55555555-5555-5555-5555-555555555555', email: 'reginaldo.alves@ativachemical.com',name: 'Reginaldo Alves',   role: 'vendedor' }, senha: 'Reginaldo@2024' },
   }
 
-  const demoUser = demoUsers[email.toLowerCase()]
-  if (demoUser && password === 'ativa2024') {
-    return demoUser
+  const entry = demoUsers[email.toLowerCase()]
+  if (entry && password === entry.senha) {
+    return entry.user
   }
 
   // Produção: verificar no banco

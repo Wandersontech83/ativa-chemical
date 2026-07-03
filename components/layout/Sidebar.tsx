@@ -17,7 +17,7 @@ import { toast } from 'sonner'
 const navSections = [
   {
     items: [
-      { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard',           roles: ['admin','gestor','analista'] },
+      { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard',           roles: ['admin','gestor','analista','vendedor'] },
       { href: '/executivo',              icon: BarChart3,       label: 'Painel Executivo',    roles: ['admin','gestor'] },
       { href: '/alertas',                icon: Bell,            label: 'Alertas Inteligentes',roles: ['admin','gestor','analista'], badge: true },
     ],
@@ -25,23 +25,23 @@ const navSections = [
   {
     label: 'Operações',
     items: [
-      { href: '/estoque',                icon: Package,         label: 'Estoque',             roles: ['admin','gestor','analista'] },
-      { href: '/produtos',               icon: Package,         label: 'Produtos',            roles: ['admin','gestor','analista'] },
-      { href: '/clientes',               icon: Users,           label: 'Clientes',            roles: ['admin','gestor','analista'] },
-      { href: '/fornecedores',           icon: Building2,       label: 'Fornecedores',        roles: ['admin','gestor'] },
-      { href: '/consultas',              icon: SearchCheck,     label: 'Consulta Cruzada',    roles: ['admin','gestor','analista'] },
+      { href: '/estoque',                icon: Package,         label: 'Estoque',             roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/produtos',               icon: Package,         label: 'Produtos',            roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/clientes',               icon: Users,           label: 'Clientes',            roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/fornecedores',           icon: Building2,       label: 'Fornecedores',        roles: ['admin','gestor','vendedor'] },
+      { href: '/consultas',              icon: SearchCheck,     label: 'Consulta Cruzada',    roles: ['admin','gestor','analista','vendedor'] },
     ],
   },
   {
     label: 'CRM & Vendas',
     items: [
-      { href: '/mapa',                   icon: MapPin,          label: 'Mapa de Clientes',    roles: ['admin','gestor','analista'] },
+      { href: '/mapa',                   icon: MapPin,          label: 'Mapa de Clientes',    roles: ['admin','gestor','analista','vendedor'] },
       { href: '/vendedores',             icon: UserCheck,       label: 'Vendedores',          roles: ['admin','gestor'] },
-      { href: '/prospeccao',             icon: Target,          label: 'Prospecção',          roles: ['admin','gestor','analista'] },
-      { href: '/crm/propostas',          icon: TrendingUp,      label: 'Propostas',           roles: ['admin','gestor','analista'] },
-      { href: '/crm/pedidos',            icon: ShoppingCart,    label: 'Pedidos de Venda',    roles: ['admin','gestor','analista'] },
-      { href: '/faturamento',            icon: FileText,        label: 'Faturamento (NF-e)',   roles: ['admin','gestor'] },
-      { href: '/logistica',              icon: Truck,           label: 'Logística',           roles: ['admin','gestor','analista'] },
+      { href: '/prospeccao',             icon: Target,          label: 'Prospecção',          roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/crm/propostas',          icon: TrendingUp,      label: 'Propostas',           roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/crm/pedidos',            icon: ShoppingCart,    label: 'Pedidos de Venda',    roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/faturamento',            icon: FileText,        label: 'Faturamento (NF-e)',   roles: ['admin','gestor','vendedor'] },
+      { href: '/logistica',              icon: Truck,           label: 'Logística',           roles: ['admin','gestor','analista','vendedor'] },
     ],
   },
   {
