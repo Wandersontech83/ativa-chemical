@@ -10,6 +10,7 @@ import {
   FileText, Truck, ShoppingCart, ScrollText, Settings,
   ChevronRight, Bot, LogOut, Zap, DollarSign, BarChart3,
   Globe, Bell, Ship, Wallet, CreditCard, LineChart, AlertTriangle,
+  MapPin, UserCheck, Calculator, Target, ShieldCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -33,6 +34,9 @@ const navSections = [
   {
     label: 'CRM & Vendas',
     items: [
+      { href: '/mapa',                   icon: MapPin,          label: 'Mapa de Clientes',    roles: ['admin','gestor','analista'] },
+      { href: '/vendedores',             icon: UserCheck,       label: 'Vendedores',          roles: ['admin','gestor'] },
+      { href: '/prospeccao',             icon: Target,          label: 'Prospecção',          roles: ['admin','gestor','analista'] },
       { href: '/crm/propostas',          icon: TrendingUp,      label: 'Propostas',           roles: ['admin','gestor','analista'] },
       { href: '/crm/pedidos',            icon: ShoppingCart,    label: 'Pedidos de Venda',    roles: ['admin','gestor','analista'] },
       { href: '/faturamento',            icon: FileText,        label: 'Faturamento (NF-e)',   roles: ['admin','gestor'] },
@@ -55,11 +59,13 @@ const navSections = [
     items: [
       { href: '/importacao',             icon: Ship,            label: 'Importações',         roles: ['admin','gestor'] },
       { href: '/importacao/trade',       icon: Globe,           label: 'Trade Dashboard',     roles: ['admin','gestor'] },
+      { href: '/importacao/calculadora', icon: Calculator,      label: 'Calculadora Import.', roles: ['admin','gestor'] },
     ],
   },
   {
     label: 'Sistema',
     items: [
+      { href: '/admin',                  icon: ShieldCheck,     label: 'Área ADM',            roles: ['admin'] },
       { href: '/configuracoes',          icon: Settings,        label: 'Configurações',       roles: ['admin'] },
     ],
   },
