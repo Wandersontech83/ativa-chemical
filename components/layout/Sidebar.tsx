@@ -10,7 +10,7 @@ import {
   FileText, Truck, ShoppingCart, ScrollText, Settings,
   ChevronRight, Bot, LogOut, Zap, DollarSign, BarChart3,
   Globe, Bell, Ship, Wallet, CreditCard, LineChart, AlertTriangle,
-  MapPin, UserCheck, Calculator, Target, ShieldCheck,
+  MapPin, UserCheck, Calculator, Target, ShieldCheck, SearchCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -29,6 +29,7 @@ const navSections = [
       { href: '/produtos',               icon: Package,         label: 'Produtos',            roles: ['admin','gestor','analista'] },
       { href: '/clientes',               icon: Users,           label: 'Clientes',            roles: ['admin','gestor','analista'] },
       { href: '/fornecedores',           icon: Building2,       label: 'Fornecedores',        roles: ['admin','gestor'] },
+      { href: '/consultas',              icon: SearchCheck,     label: 'Consulta Cruzada',    roles: ['admin','gestor','analista'] },
     ],
   },
   {
