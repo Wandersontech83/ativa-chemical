@@ -146,7 +146,7 @@ export default function DashboardClient({ data }: { data: any }) {
           <h1 className="font-display text-2xl font-bold text-slate-900">
             Painel de <span className="gradient-text">Controle</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-0.5">Visão geral das operações — Junho 2024</p>
+          <p className="text-slate-400 text-sm mt-0.5">Visão geral das operações — {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-3 py-1.5 rounded-xl font-medium">
@@ -391,6 +391,53 @@ export default function DashboardClient({ data }: { data: any }) {
                   </Link>
                 )
               })}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Sugestão do dia */}
+      {(() => {
+        const hoje = new Date()
+        const clientes = CLIENTES_SEED
+        // Cliente mais urgente: sem compra há mais tempo e alto faturamento
+        const candidatos = clientes
+          .filter(c => c.ultima_compra && ['sem_compra','inadimplente','ativo'].includes(c.status))
+          .map(c => {
+            const dias = Math.floor((hoje.getTime() - new Date(c.ultima_compra!).getTime()) / 86400000)
+            const score = dias * 0.4 + c.faturamento12m / 10000
+            return { ...c, dias, score }
+          })
+          .sort((a, b) => b.score - a.score)
+        const top = candidatos[0]
+        if (!top) return null
+        return (
+          <div className="glass-card p-5 border border-amber-100 bg-gradient-to-r from-amber-50/60 to-orange-50/40">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Zap size={18} className="text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-amber-600 tracking-widest uppercase mb-0.5">Sugestão do dia · NEXUS AI</p>
+                  <p className="text-sm font-bold text-slate-800">Priorize: <span className="text-amber-700">{top.nome}</span></p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {top.cidade}/{top.uf} · Sem compra há <strong className="text-slate-700">{top.dias} dias</strong> · Fat. 12M: <strong>{formatCurrency(top.faturamento12m)}</strong>
+                  </p>
+                  <p className="text-xs text-violet-700 italic mt-1">💡 Inicie a rota pela região {top.uf} — alta probabilidade de recompra no radar.</p>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <Link href="/mapa"
+                  className="text-xs font-bold px-3 py-2 rounded-xl text-white flex items-center gap-1.5"
+                  style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)' }}>
+                  <MapPin size={12} /> Ver no mapa
+                </Link>
+                <Link href="/agenda"
+                  className="text-xs font-bold px-3 py-2 rounded-xl border border-amber-300 text-amber-700 hover:bg-amber-100 transition-colors flex items-center gap-1.5">
+                  Agendar visita
+                </Link>
+              </div>
             </div>
           </div>
         )

@@ -10,7 +10,7 @@ import {
   FileText, Truck, ShoppingCart, ScrollText, Settings,
   ChevronRight, Bot, LogOut, Zap, DollarSign, BarChart3,
   Globe, Bell, Ship, Wallet, CreditCard, LineChart, AlertTriangle,
-  MapPin, UserCheck, Calculator, Target, ShieldCheck, SearchCheck,
+  MapPin, UserCheck, Calculator, Target, ShieldCheck, SearchCheck, CalendarDays,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -36,6 +36,7 @@ const navSections = [
     label: 'CRM & Vendas',
     items: [
       { href: '/mapa',                   icon: MapPin,          label: 'Mapa de Clientes',    roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/agenda',                 icon: CalendarDays,    label: 'Agenda de Visitas',   roles: ['admin','gestor','analista','vendedor'] },
       { href: '/vendedores',             icon: UserCheck,       label: 'Vendedores',          roles: ['admin','gestor'] },
       { href: '/prospeccao',             icon: Target,          label: 'Prospecção',          roles: ['admin','gestor','analista','vendedor'] },
       { href: '/crm/propostas',          icon: TrendingUp,      label: 'Propostas',           roles: ['admin','gestor','analista','vendedor'] },
