@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react'
 import { Bot, X, Send, Minimize2, Maximize2, Loader2, Sparkles, Plus, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { saveData, loadData, genId } from '@/lib/storage'
+import { CLIENTES_SEED } from '@/lib/clientes-seed'
+import { HISTORICO_CONSUMO, PRODUTOS_CATALOGO } from '@/lib/consultas-seed'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
@@ -19,7 +21,7 @@ const MODOS: { key: AgentMode; label: string; emoji: string; cor: string; desc: 
 ]
 
 const SUGESTOES: Record<AgentMode, string[]> = {
-  comercial:  ['Criar proposta para Nordeste Química — 500kg de Acetona', 'Emitir pedido para IndTex Plásticos', 'Quais clientes têm propostas pendentes?'],
+  comercial:  ['Clientes sem compra há mais de 60 dias', 'Quais recompras estão previstas essa semana?', 'Saúde da carteira comercial'],
   financeiro: ['Qual o saldo de contas a receber?', 'Quem está inadimplente?', 'Projeção de caixa para dezembro'],
   compras:    ['Criar OC para Hunan Chemical — 2000kg TiO2', 'Qual fornecedor tem menor prazo?', 'OC pendentes de aprovação'],
   estoque:    ['Registrar entrada de 500kg de Acetona', 'Quais produtos estão no mínimo?', 'Saldo atual do estoque'],
@@ -209,6 +211,61 @@ export default function AgentChat() {
 
   const modoAtual = MODOS.find(m => m.key === modo)!
 
+  function respostaLocalCRM(msg: string): string | null {
+    const q = msg.toLowerCase()
+    const clientes = loadData('clientes_geo', CLIENTES_SEED)
+
+    // Clientes sem compra
+    if (q.includes('sem compra') || q.includes('clientes inativos') || q.includes('reativar')) {
+      const lista = clientes.filter((c: any) => ['sem_compra', 'inadimplente', 'inativo'].includes(c.status))
+      if (!lista.length) return '✅ Nenhum cliente sem compra recente no momento.'
+      const linhas = lista.slice(0, 8).map((c: any) => `• **${c.nome}** (${c.cidade}/${c.uf}) — ${c.status} — vendedor: ${c.vendedor}`)
+      return `🔴 **${lista.length} clientes sem compra recente:**\n\n${linhas.join('\n')}\n\n💡 Use o Radar de Recompra em Prospecção para ver previsões de compra por produto.`
+    }
+
+    // Clientes por vendedor
+    const vendMatch = q.match(/clientes (?:do|da|de) (.+?)(?:\s|$)/)
+    if (vendMatch || q.includes('carteira')) {
+      const vendorName = vendMatch?.[1]
+      const filtrados = vendorName
+        ? clientes.filter((c: any) => c.vendedor.toLowerCase().includes(vendorName.trim()))
+        : clientes
+      if (vendorName && !filtrados.length) return `Não encontrei vendedor com nome "${vendMatch![1]}".`
+      const ativos = filtrados.filter((c: any) => c.status === 'ativo').length
+      const fat = filtrados.reduce((s: number, c: any) => s + c.faturamento12m, 0)
+      const desc = vendorName ? `do vendedor "${filtrados[0]?.vendedor}"` : 'da carteira geral'
+      return `📋 **Carteira ${desc}:** ${filtrados.length} clientes · ${ativos} ativos · Fat. 12M: R$ ${fat.toLocaleString('pt-BR')}\n\n${filtrados.slice(0, 6).map((c: any) => `• ${c.nome} (${c.uf}) — ${c.status}`).join('\n')}`
+    }
+
+    // Radar de recompra
+    if (q.includes('recompra') || q.includes('reposi') || q.includes('próxima compra')) {
+      const hoje = new Date()
+      const urgentes = HISTORICO_CONSUMO
+        .filter(h => h.ultima_compra && h.freq_meses > 0)
+        .map(h => {
+          const proxima = new Date(h.ultima_compra)
+          proxima.setMonth(proxima.getMonth() + h.freq_meses)
+          const dias = Math.round((proxima.getTime() - hoje.getTime()) / 86400000)
+          const cliente = clientes.find((c: any) => c.id === h.cliente_id)
+          const produto = PRODUTOS_CATALOGO.find(p => p.id === h.produto_id)
+          return { dias, cliente, produto }
+        })
+        .filter(x => x.dias <= 7 && x.cliente && x.produto)
+        .slice(0, 6)
+      if (!urgentes.length) return '✅ Nenhuma recompra prevista nos próximos 7 dias.'
+      return `⏰ **Recompras previstas em até 7 dias:**\n\n${urgentes.map(u => `• **${u.cliente!.nome}** — ${u.produto!.nome} · em ${Math.max(0, u.dias)} dias`).join('\n')}\n\n💡 Acesse Prospecção → Radar de Recompra para a visão completa.`
+    }
+
+    // Health score / saúde da carteira
+    if (q.includes('saúde') || q.includes('health') || q.includes('risco')) {
+      const emRisco = clientes.filter((c: any) => ['inadimplente', 'sem_compra'].includes(c.status))
+      const fat = emRisco.reduce((s: number, c: any) => s + c.faturamento12m, 0)
+      return `🏥 **Saúde da carteira:**\n\n• Em risco: **${emRisco.length} clientes** (Fat. 12M: R$ ${fat.toLocaleString('pt-BR')})\n• Inadimplentes: ${clientes.filter((c: any) => c.status === 'inadimplente').length}\n• Sem compra: ${clientes.filter((c: any) => c.status === 'sem_compra').length}\n• Inativos: ${clientes.filter((c: any) => c.status === 'inativo').length}\n\n💡 Use o Mapa de Clientes com filtro de status para visualizar a distribuição geográfica.`
+    }
+
+    return null
+  }
+
   const send = async (text?: string) => {
     const msg = (text || input).trim()
     if (!msg || loading) return
@@ -217,6 +274,17 @@ export default function AgentChat() {
     const apiMessages = [...messages, userMsg]
     setMessages(apiMessages)
     setLoading(true)
+
+    // Resposta local CRM (sem custo de API)
+    const localReply = respostaLocalCRM(msg)
+    if (localReply) {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: 'assistant', content: localReply }])
+        setLoading(false)
+      }, 600)
+      return
+    }
+
     try {
       const res = await fetch('/api/agent', {
         method: 'POST',

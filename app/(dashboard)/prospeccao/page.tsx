@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Plus, X, ChevronRight, Target, Users, TrendingUp, AlertTriangle, Building2, Loader2 } from 'lucide-react'
+import { Search, Plus, X, ChevronRight, Target, Users, TrendingUp, AlertTriangle, Building2, Loader2, Radar, Presentation, Monitor } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PROSPECTS_SEED, CLIENTES_SEED } from '@/lib/clientes-seed'
+import { HISTORICO_CONSUMO, PRODUTOS_CATALOGO } from '@/lib/consultas-seed'
 import { loadData, saveData, genId } from '@/lib/storage'
 
 type StatusProspect = 'novo' | 'contatado' | 'qualificado' | 'proposta' | 'convertido' | 'perdido'
@@ -24,8 +25,9 @@ export default function ProspeccaoPage() {
   const [loadingCnpj, setLoadingCnpj] = useState(false)
   const [cnpjResult, setCnpjResult] = useState<any>(null)
   const [cnpjError, setCnpjError] = useState('')
-  const [aba, setAba] = useState<'kanban' | 'radar'>('kanban')
+  const [aba, setAba] = useState<'kanban' | 'radar' | 'recompra'>('kanban')
   const [dragging, setDragging] = useState<string | null>(null)
+  const [modoApresentacao, setModoApresentacao] = useState(false)
 
   const clientes = CLIENTES_SEED
 
@@ -99,7 +101,12 @@ export default function ProspeccaoPage() {
           <p className="text-slate-500 text-sm mt-0.5">{prospects.length} prospects · Funil Kanban</p>
         </div>
         <div className="flex gap-2">
-          {[{ k:'kanban', l:'Funil Kanban' }, { k:'radar', l:'Radar de Oportunidades' }].map(a => (
+          <button onClick={() => setModoApresentacao(!modoApresentacao)}
+            className={cn('flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all',
+              modoApresentacao ? 'bg-violet-600 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50')}>
+            <Monitor size={14} /> {modoApresentacao ? 'Modo cliente ON' : 'Modo apresentação'}
+          </button>
+          {[{ k:'kanban', l:'Funil Kanban' }, { k:'radar', l:'Radar de Oportunidades' }, { k:'recompra', l:'Radar de Recompra' }].map(a => (
             <button key={a.k} onClick={() => setAba(a.k as any)}
               className={cn('px-4 py-2 rounded-xl text-sm font-semibold transition-colors', aba === a.k ? 'bg-cyan-600 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50')}>
               {a.l}
@@ -217,6 +224,106 @@ export default function ProspeccaoPage() {
           ))}
         </div>
       )}
+
+      {/* ABA RADAR DE RECOMPRA */}
+      {aba === 'recompra' && (() => {
+        const hoje = new Date()
+        // Para cada linha de historico_consumo, calcular data estimada da próxima compra
+        const previsoes = HISTORICO_CONSUMO
+          .filter(h => h.ultima_compra && h.freq_meses > 0)
+          .map(h => {
+            const ultima = new Date(h.ultima_compra)
+            const proxima = new Date(ultima)
+            proxima.setMonth(proxima.getMonth() + h.freq_meses)
+            const diasRestantes = Math.round((proxima.getTime() - hoje.getTime()) / 86400000)
+            const cliente = clientes.find(c => c.id === h.cliente_id)
+            const produto = PRODUTOS_CATALOGO.find(p => p.id === h.produto_id)
+            if (!cliente || !produto) return null
+            return { ...h, diasRestantes, cliente, produto, proxima }
+          })
+          .filter(Boolean)
+          .sort((a, b) => a!.diasRestantes - b!.diasRestantes) as any[]
+
+        const vencidos   = previsoes.filter(p => p.diasRestantes < 0)
+        const proximos7  = previsoes.filter(p => p.diasRestantes >= 0 && p.diasRestantes <= 7)
+        const proximos30 = previsoes.filter(p => p.diasRestantes > 7 && p.diasRestantes <= 30)
+        const futuros    = previsoes.filter(p => p.diasRestantes > 30)
+
+        const grupos = [
+          { titulo: 'Em atraso — compra esperada', lista: vencidos,   cor: '#ef4444', bg: 'bg-red-50',    badge: 'Urgente' },
+          { titulo: 'Nos próximos 7 dias',          lista: proximos7,  cor: '#f59e0b', bg: 'bg-amber-50',  badge: '7 dias' },
+          { titulo: 'Nos próximos 30 dias',         lista: proximos30, cor: '#3b82f6', bg: 'bg-blue-50',   badge: '30 dias' },
+          { titulo: 'Previsão futura',              lista: futuros,    cor: '#10b981', bg: 'bg-emerald-50',badge: 'OK' },
+        ]
+
+        return (
+          <div className="space-y-4">
+            {modoApresentacao && (
+              <div className="bg-violet-50 border border-violet-200 rounded-2xl px-5 py-3 flex items-center gap-3">
+                <Monitor size={16} className="text-violet-600" />
+                <div>
+                  <p className="text-sm font-bold text-violet-800">Modo Apresentação ativo</p>
+                  <p className="text-xs text-violet-600">Valores financeiros e margens ocultos — visão do cliente</p>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {[
+                { l:'Em atraso', v: vencidos.length,   cor:'#ef4444' },
+                { l:'7 dias',    v: proximos7.length,  cor:'#f59e0b' },
+                { l:'30 dias',   v: proximos30.length, cor:'#3b82f6' },
+                { l:'Futuros',   v: futuros.length,    cor:'#10b981' },
+              ].map(s => (
+                <div key={s.l} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+                  <p className="text-3xl font-bold" style={{ color: s.cor }}>{s.v}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{s.l}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {grupos.filter(g => g.lista.length > 0).map(g => (
+                <div key={g.titulo} className={cn('rounded-2xl border border-slate-200 p-4', g.bg)}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold text-slate-700">{g.titulo}</h3>
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full text-white" style={{ background: g.cor }}>
+                      {g.badge} · {g.lista.length}
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {g.lista.map((p: any, i: number) => (
+                      <div key={i} className="bg-white rounded-xl p-3 border border-slate-100 shadow-sm">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">{p.cliente.nome}</p>
+                            <p className="text-[10px] text-slate-400">{p.cliente.cidade}/{p.cliente.uf}</p>
+                          </div>
+                          <span className="text-[10px] font-bold flex-shrink-0 px-1.5 py-0.5 rounded-md" style={{ background: g.cor + '22', color: g.cor }}>
+                            {p.diasRestantes < 0 ? `${Math.abs(p.diasRestantes)}d atraso` : `${p.diasRestantes}d`}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-700 font-medium truncate">{p.produto.nome}</p>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <p className="text-[10px] text-slate-500">{p.volume_medio_kg} kg/ciclo · freq. {p.freq_meses}m</p>
+                          {!modoApresentacao && (
+                            <p className="text-[10px] font-bold text-slate-700">{formatCurrency(p.valor_mensal)}/mês</p>
+                          )}
+                        </div>
+                        <a href={`https://wa.me/55?text=${encodeURIComponent(`Olá! Podemos conversar sobre reposição de ${p.produto.nome}?`)}`}
+                          target="_blank"
+                          className="mt-2 flex items-center gap-1 text-[10px] font-bold text-emerald-600 hover:text-emerald-700">
+                          <span>📲</span> Contatar via WhatsApp
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

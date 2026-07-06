@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Users, TrendingUp, DollarSign, Target, Trophy, ChevronRight, Star, MapPin } from 'lucide-react'
+import { Users, TrendingUp, DollarSign, Target, Trophy, ChevronRight, Star, MapPin, Search, Package, MessageCircle } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { VENDEDORES_SEED, CLIENTES_SEED } from '@/lib/clientes-seed'
+import { HISTORICO_CONSUMO, PRODUTOS_CATALOGO } from '@/lib/consultas-seed'
 import { loadData, saveData } from '@/lib/storage'
+import { UF_REGIAO, REGIAO_COR, calcularHealthScore } from '@/lib/regions'
 
 type Vendedor = typeof VENDEDORES_SEED[0]
 
@@ -45,9 +47,10 @@ export default function VendedoresPage() {
   const vendedores = loadData('vendedores', VENDEDORES_SEED)
   const clientes = loadData('clientes_geo', CLIENTES_SEED)
   const [selecionado, setSelecionado] = useState<Vendedor>(vendedores[0])
-  const [abaDetalhe, setAbaDetalhe] = useState<'kpis' | 'comissao' | 'clientes' | 'meta'>('kpis')
+  const [abaDetalhe, setAbaDetalhe] = useState<'kpis' | 'comissao' | 'clientes' | 'portfolio' | 'meta'>('kpis')
   const [editandoMeta, setEditandoMeta] = useState(false)
   const [novaMeta, setNovaMeta] = useState({ brl: 0, kg: 0 })
+  const [buscaPortfolio, setBuscaPortfolio] = useState('')
 
   const totalEmpresa = Object.values(VENDAS_MES).reduce((s, v) => s + v.faturamento, 0)
 
@@ -69,7 +72,7 @@ export default function VendedoresPage() {
     <div className="space-y-5 animate-fade-up">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Painel de Vendedores</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Carteira, comissões e metas — Dezembro 2024</p>
+        <p className="text-slate-500 text-sm mt-0.5">Carteira, comissões e metas — julho 2026</p>
       </div>
 
       {/* Ranking rápido */}
@@ -106,7 +109,7 @@ export default function VendedoresPage() {
             <p className="text-cyan-300 text-xs">{selecionado.email} · UFs: {selecionado.ufs.join(', ')}</p>
           </div>
           <div className="flex gap-3">
-            {[{ k:'kpis', l:'KPIs' }, { k:'comissao', l:'Comissão' }, { k:'clientes', l:'Carteira' }, { k:'meta', l:'Meta' }].map(a => (
+            {[{ k:'kpis', l:'KPIs' }, { k:'comissao', l:'Comissão' }, { k:'clientes', l:'Carteira' }, { k:'portfolio', l:'Portfólio' }, { k:'meta', l:'Meta' }].map(a => (
               <button key={a.k} onClick={() => setAbaDetalhe(a.k as any)}
                 className={cn('px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors', abaDetalhe === a.k ? 'bg-cyan-500 text-white' : 'text-slate-300 hover:text-white')}>
                 {a.l}
@@ -214,6 +217,84 @@ export default function VendedoresPage() {
               </div>
             </div>
           )}
+
+          {/* ABA PORTFÓLIO */}
+          {abaDetalhe === 'portfolio' && (() => {
+            const carteira = detalhe.carteira
+            const consumos = HISTORICO_CONSUMO.filter(h => carteira.some(c => c.id === h.cliente_id))
+            // Agrupar produtos comercializados com total
+            const porProduto = PRODUTOS_CATALOGO.map(p => {
+              const registros = consumos.filter(h => h.produto_id === p.id)
+              const totalMensal = registros.reduce((s, h) => s + h.valor_mensal, 0)
+              const nClientes = new Set(registros.map(h => h.cliente_id)).size
+              return { ...p, totalMensal, nClientes, registros }
+            }).filter(p => p.nClientes > 0 || buscaPortfolio)
+            const filtrados = porProduto.filter(p =>
+              !buscaPortfolio || p.nome.toLowerCase().includes(buscaPortfolio.toLowerCase()) || p.codigo.toLowerCase().includes(buscaPortfolio.toLowerCase())
+            )
+            const regioes = Array.from(new Set(carteira.map(c => UF_REGIAO[c.uf]).filter(Boolean)))
+            return (
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1 max-w-xs">
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input value={buscaPortfolio} onChange={e => setBuscaPortfolio(e.target.value)}
+                      placeholder="Buscar produto no portfólio..."
+                      className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-300" />
+                  </div>
+                  <div className="flex gap-1.5">
+                    {regioes.map(r => (
+                      <span key={r} className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: REGIAO_COR[r] + '22', color: REGIAO_COR[r] }}>
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-xs text-slate-400 ml-auto">{filtrados.length} produto{filtrados.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                  {filtrados.length === 0 ? (
+                    <p className="text-sm text-slate-400 text-center py-8">Nenhum produto encontrado</p>
+                  ) : filtrados.map(p => (
+                    <div key={p.id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 hover:bg-slate-100 transition-colors">
+                      <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center flex-shrink-0">
+                        <Package size={14} className="text-cyan-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-800 truncate">{p.nome}</p>
+                        <p className="text-[10px] text-slate-400">{p.codigo} · {p.nClientes} cliente{p.nClientes !== 1 ? 's' : ''} · NCM {p.ncm}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-slate-900">{formatCurrency(p.totalMensal)}</p>
+                        <p className="text-[10px] text-slate-400">/mês</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Top clientes da carteira com health score */}
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="text-xs font-semibold text-slate-600 mb-3 uppercase tracking-wide">Carteira — health score</p>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                    {carteira.map(c => {
+                      const hs = calcularHealthScore(c)
+                      const wa = `https://wa.me/55?text=${encodeURIComponent(`Olá! Sou ${selecionado.nome} da Ativa Chemical.`)}`
+                      return (
+                        <div key={c.id} className="bg-white border border-slate-100 rounded-xl p-3 flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: hs.cor }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-semibold text-slate-800 truncate">{c.nome}</p>
+                            <p className="text-[10px] text-slate-400">{c.cidade}/{c.uf}</p>
+                          </div>
+                          <a href={wa} target="_blank" className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors flex-shrink-0">
+                            <MessageCircle size={11} className="text-emerald-600" />
+                          </a>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* ABA META */}
           {abaDetalhe === 'meta' && (
