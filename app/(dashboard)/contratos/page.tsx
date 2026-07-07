@@ -11,10 +11,13 @@ import Modal from '@/components/ui/Modal'
 import { loadData, saveData, genId } from '@/lib/storage'
 
 interface Contrato {
-  id: string; numero: string; titulo: string; parte: string; tipo: 'cliente' | 'fornecedor'
-  inicio: string; fim: string; valor_mensal: number
+  id: string; numero: string; titulo: string; parte: string
+  tipo: 'cliente' | 'fornecedor'
+  tipo_servico: 'compra_ativa' | 'prestacao_servico' | 'contrato_fornecimento'
+  inicio: string; fim: string; meses: number; valor_mensal: number
   status: 'ativo' | 'vencendo' | 'vencido' | 'suspenso'
   objeto: string; responsavel: string
+  vinculo?: string
 }
 
 interface Anexo {
@@ -24,17 +27,23 @@ interface Anexo {
 }
 
 const SEED: Contrato[] = [
-  { id: 'con-001', numero: 'CT-2026-001', titulo: 'Fornecimento Contínuo de Solventes', parte: 'Quimibras Ind. Ltda', tipo: 'fornecedor', inicio: '2026-01-01', fim: '2027-01-01', valor_mensal: 45000, status: 'ativo', objeto: 'Fornecimento mensal de acetona e tolueno industrial', responsavel: 'Wanderson Lima' },
-  { id: 'con-002', numero: 'CT-2026-002', titulo: 'Distribuição Exclusiva Nordeste', parte: 'Nordeste Química Ltda', tipo: 'cliente', inicio: '2026-03-01', fim: '2027-03-01', valor_mensal: 120000, status: 'ativo', objeto: 'Distribuição exclusiva de produtos Ativa Chemical na região nordeste', responsavel: 'Wanderson Lima' },
-  { id: 'con-003', numero: 'CT-2026-003', titulo: 'Importação Pigmentos China', parte: 'Hunan Chemical Co. Ltd', tipo: 'fornecedor', inicio: '2026-06-01', fim: '2026-12-31', valor_mensal: 78000, status: 'vencendo', objeto: 'Importação de dióxido de titânio e pigmentos especiais', responsavel: 'Wanderson Lima' },
-  { id: 'con-004', numero: 'CT-2025-008', titulo: 'Fornecimento Polímeros', parte: 'GZ Poly Materials', tipo: 'fornecedor', inicio: '2025-09-01', fim: '2026-03-01', valor_mensal: 32000, status: 'vencido', objeto: 'Fornecimento de DOP e plastificantes', responsavel: 'Wanderson Lima' },
+  { id: 'con-001', numero: 'CT-2026-001', titulo: 'Fornecimento Contínuo de Solventes', parte: 'Quimibras Ind. Ltda', tipo: 'fornecedor', tipo_servico: 'compra_ativa', inicio: '2026-01-01', fim: '2027-01-01', meses: 12, valor_mensal: 45000, status: 'ativo', objeto: 'Fornecimento mensal de acetona e tolueno industrial', responsavel: 'Wanderson Lima' },
+  { id: 'con-002', numero: 'CT-2026-002', titulo: 'Distribuição Exclusiva Nordeste', parte: 'Nordeste Química Ltda', tipo: 'cliente', tipo_servico: 'contrato_fornecimento', inicio: '2026-03-01', fim: '2027-03-01', meses: 12, valor_mensal: 120000, status: 'ativo', objeto: 'Distribuição exclusiva de produtos Ativa Chemical na região nordeste', responsavel: 'Wanderson Lima' },
+  { id: 'con-003', numero: 'CT-2026-003', titulo: 'Importação Pigmentos China', parte: 'Hunan Chemical Co. Ltd', tipo: 'fornecedor', tipo_servico: 'compra_ativa', inicio: '2026-06-01', fim: '2026-12-31', meses: 7, valor_mensal: 78000, status: 'vencendo', objeto: 'Importação de dióxido de titânio e pigmentos especiais', responsavel: 'Wanderson Lima' },
+  { id: 'con-004', numero: 'CT-2025-008', titulo: 'Fornecimento Polímeros', parte: 'GZ Poly Materials', tipo: 'fornecedor', tipo_servico: 'compra_ativa', inicio: '2025-09-01', fim: '2026-03-01', meses: 6, valor_mensal: 32000, status: 'vencido', objeto: 'Fornecimento de DOP e plastificantes', responsavel: 'Wanderson Lima' },
 ]
 
 const EMPTY: Omit<Contrato,'id'> = {
-  numero: '', titulo: '', parte: '', tipo: 'fornecedor',
+  numero: '', titulo: '', parte: '', tipo: 'fornecedor', tipo_servico: 'compra_ativa',
   inicio: new Date().toISOString().split('T')[0],
   fim: new Date(Date.now() + 365*86400000).toISOString().split('T')[0],
-  valor_mensal: 0, status: 'ativo', objeto: '', responsavel: 'Wanderson Lima'
+  meses: 12, valor_mensal: 0, status: 'ativo', objeto: '', responsavel: 'Wanderson Lima', vinculo: '',
+}
+
+const TIPO_SERVICO_CONFIG = {
+  compra_ativa:         { label: 'Compra para Ativa',          color: 'bg-blue-100 text-blue-700' },
+  prestacao_servico:    { label: 'Prestação de Serviço',       color: 'bg-purple-100 text-purple-700' },
+  contrato_fornecimento:{ label: 'Contrato de Fornecimento',   color: 'bg-teal-100 text-teal-700' },
 }
 
 const STATUS_CONFIG = {
@@ -256,7 +265,7 @@ export default function ContratosPage() {
                   <div className="bg-slate-50 rounded-xl p-3">
                     <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><DollarSign size={11}/>Valor mensal</p>
                     <p className="font-bold text-slate-800 text-lg">{formatCurrency(detalhe.valor_mensal)}</p>
-                    <p className="text-xs text-slate-400">Anual: {formatCurrency(detalhe.valor_mensal * 12)}</p>
+                    <p className="text-xs text-slate-400">Total: {formatCurrency(detalhe.valor_mensal * (detalhe.meses||12))} ({detalhe.meses||12}m)</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-3">
                     <p className="text-xs text-slate-500 flex items-center gap-1 mb-1"><Calendar size={11}/>Vigência</p>
@@ -282,6 +291,18 @@ export default function ContratosPage() {
                       {detalhe.tipo}
                     </span>
                   </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Tipo Serviço</span>
+                    <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full', TIPO_SERVICO_CONFIG[detalhe.tipo_servico]?.color || 'bg-slate-100 text-slate-600')}>
+                      {TIPO_SERVICO_CONFIG[detalhe.tipo_servico]?.label || detalhe.tipo_servico}
+                    </span>
+                  </div>
+                  {detalhe.vinculo && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Vínculo</span>
+                      <span className="font-mono text-xs text-cyan-700 font-semibold">{detalhe.vinculo}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500 flex items-center gap-1"><User size={12}/>Responsável</span>
                     <span className="font-medium text-slate-700">{detalhe.responsavel}</span>
@@ -377,12 +398,19 @@ export default function ContratosPage() {
       {/* Modal Criar/Editar */}
       <Modal open={modal} onClose={() => setModal(false)} title={editing ? `Editar ${form.numero}` : 'Novo Contrato'} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div><label className="form-label">Nº do Contrato</label><input value={form.numero} onChange={f('numero')} className="form-input" required/></div>
             <div><label className="form-label">Tipo</label>
               <select value={form.tipo} onChange={f('tipo')} className="form-input">
                 <option value="cliente">Cliente</option>
                 <option value="fornecedor">Fornecedor</option>
+              </select>
+            </div>
+            <div><label className="form-label">Tipo de Serviço</label>
+              <select value={form.tipo_servico} onChange={f('tipo_servico')} className="form-input">
+                <option value="compra_ativa">Compra para Ativa</option>
+                <option value="prestacao_servico">Prestação de Serviço</option>
+                <option value="contrato_fornecimento">Contrato de Fornecimento</option>
               </select>
             </div>
           </div>
@@ -395,8 +423,16 @@ export default function ContratosPage() {
             <div><label className="form-label">Início da Vigência</label><input type="date" value={form.inicio} onChange={f('inicio')} className="form-input"/></div>
             <div><label className="form-label">Fim da Vigência</label><input type="date" value={form.fim} onChange={f('fim')} className="form-input"/></div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div><label className="form-label">Valor Mensal (R$)</label><input type="number" step="0.01" value={form.valor_mensal} onChange={f('valor_mensal')} className="form-input" min="0"/></div>
+            <div><label className="form-label">Meses de Vigência</label><input type="number" value={form.meses} onChange={f('meses')} className="form-input" min="1"/></div>
+            <div>
+              <label className="form-label">Valor Total</label>
+              <div className="form-input bg-slate-50 font-semibold text-slate-700">{formatCurrency((form.valor_mensal||0)*(form.meses||1))}</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="form-label">Vínculo (PV/OC/Proposta)</label><input value={form.vinculo||''} onChange={f('vinculo')} className="form-input" placeholder="Ex: PV-2026-001"/></div>
             <div><label className="form-label">Status</label>
               <select value={form.status} onChange={f('status')} className="form-input">
                 {Object.entries(STATUS_CONFIG).map(([k,v]) => <option key={k} value={k}>{v.label}</option>)}

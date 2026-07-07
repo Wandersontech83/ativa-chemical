@@ -11,7 +11,7 @@ import {
   ChevronRight, Bot, LogOut, Zap, DollarSign, BarChart3,
   Globe, Bell, Ship, Wallet, CreditCard, LineChart, AlertTriangle,
   MapPin, UserCheck, Calculator, Target, ShieldCheck, SearchCheck, CalendarDays,
-  Sunrise, Kanban,
+  Sunrise, Kanban, ClipboardCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -56,6 +56,7 @@ const navSections = [
       { href: '/financeiro/fluxo',       icon: LineChart,       label: 'Fluxo de Caixa',      roles: ['admin','gestor'] },
       { href: '/financeiro/indicadores', icon: DollarSign,      label: 'Indicadores',         roles: ['admin','gestor'] },
       { href: '/compras',                icon: ShoppingCart,    label: 'Ordens de Compra',    roles: ['admin','gestor'] },
+      { href: '/aprovacoes',             icon: ClipboardCheck,  label: 'Aprovações',          roles: ['admin','gestor'] },
       { href: '/contratos',              icon: ScrollText,      label: 'Contratos',           roles: ['admin','gestor'] },
     ],
   },

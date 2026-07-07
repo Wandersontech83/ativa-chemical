@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { Plus, Pencil, Trash2, Users, Shield, Key, Eye, EyeOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users, Shield, Key, Eye, EyeOff, Package } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData, genId } from '@/lib/storage'
+import { CATEGORIAS_PRODUTO } from '@/lib/payment-conditions'
 
 interface Usuario {
-  id: string; nome: string; email: string; perfil: 'admin' | 'gestor' | 'analista'
-  status: 'ativo' | 'inativo'; criado_em: string
+  id: string; nome: string; email: string; perfil: 'admin' | 'gestor' | 'analista' | 'vendedor'
+  status: 'ativo' | 'inativo'; criado_em: string; grupos_produtos?: string[]
 }
 
 const SEED: Usuario[] = [
@@ -18,13 +19,14 @@ const SEED: Usuario[] = [
 ]
 
 const EMPTY: Omit<Usuario,'id'|'criado_em'> & { senha: string } = {
-  nome: '', email: '', perfil: 'analista', status: 'ativo', senha: ''
+  nome: '', email: '', perfil: 'analista', status: 'ativo', senha: '', grupos_produtos: []
 }
 
 const PERFIL_CONFIG = {
-  admin: { label: 'Administrador', color: 'bg-red-100 text-red-700', desc: 'Acesso total ao sistema' },
-  gestor: { label: 'Gestor', color: 'bg-blue-100 text-blue-700', desc: 'Acesso a relatórios e aprovações' },
-  analista: { label: 'Analista', color: 'bg-slate-100 text-slate-600', desc: 'Acesso operacional básico' },
+  admin:    { label: 'Administrador', color: 'bg-red-100 text-red-700',     desc: 'Acesso total ao sistema' },
+  gestor:   { label: 'Gestor',        color: 'bg-blue-100 text-blue-700',   desc: 'Acesso a relatórios e aprovações' },
+  analista: { label: 'Analista',      color: 'bg-slate-100 text-slate-600', desc: 'Acesso operacional básico' },
+  vendedor: { label: 'Vendedor',      color: 'bg-cyan-100 text-cyan-700',   desc: 'Acesso a CRM, pedidos e clientes' },
 }
 
 export default function ConfiguracoesPage() {
@@ -167,6 +169,7 @@ export default function ConfiguracoesPage() {
                 <option value="admin">Administrador</option>
                 <option value="gestor">Gestor</option>
                 <option value="analista">Analista</option>
+                <option value="vendedor">Vendedor</option>
               </select>
             </div>
             <div><label className="form-label">Status</label>
@@ -178,7 +181,31 @@ export default function ConfiguracoesPage() {
           </div>
           {form.perfil && (
             <div className="bg-slate-50 rounded-xl p-3 text-sm text-slate-500">
-              <Shield size={12} className="inline mr-1"/>{PERFIL_CONFIG[form.perfil].desc}
+              <Shield size={12} className="inline mr-1"/>{PERFIL_CONFIG[form.perfil as keyof typeof PERFIL_CONFIG]?.desc}
+            </div>
+          )}
+          {form.perfil === 'vendedor' && (
+            <div>
+              <label className="form-label flex items-center gap-1"><Package size={12}/>Grupos de Produtos</label>
+              <p className="text-xs text-slate-400 mb-2">Selecione as categorias que este vendedor atende</p>
+              <div className="grid grid-cols-2 gap-1.5 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                {CATEGORIAS_PRODUTO.map(cat => {
+                  const checked = (form.grupos_produtos || []).includes(cat)
+                  return (
+                    <label key={cat} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input type="checkbox" checked={checked}
+                        onChange={e => setForm(prev => ({
+                          ...prev,
+                          grupos_produtos: e.target.checked
+                            ? [...(prev.grupos_produtos||[]), cat]
+                            : (prev.grupos_produtos||[]).filter((g:string) => g !== cat)
+                        }))}
+                        className="rounded border-slate-300"/>
+                      <span className="text-slate-700">{cat}</span>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
           )}
           <div className="flex gap-2 justify-end pt-2">
