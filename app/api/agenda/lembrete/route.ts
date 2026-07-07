@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Resend } from 'resend'
 import { verifyToken } from '@/lib/auth'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.RESEND_FROM || 'Ativa Chemical ERP <agenda@ativachemical.com.br>'
 
 interface VisitaPayload {
@@ -97,6 +95,9 @@ export async function POST(req: NextRequest) {
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ error: 'RESEND_API_KEY não configurada', tip: 'Configure em Vercel > Settings > Environment Variables' }, { status: 503 })
     }
+
+    const { Resend } = await import('resend')
+    const resend = new Resend(process.env.RESEND_API_KEY)
 
     const { visitas, tipo } = await req.json() as { visitas: VisitaPayload[]; tipo: 'confirmacao' | 'resumo_dia' }
     if (!visitas?.length) return NextResponse.json({ error: 'Nenhuma visita informada' }, { status: 400 })
