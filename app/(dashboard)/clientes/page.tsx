@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { Plus, Search, Pencil, Trash2, Users, Phone, Mail } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Users, Phone, Mail, Eye } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData, genId } from '@/lib/storage'
 
@@ -25,6 +26,7 @@ const SEGMENTOS = ['Tintas e Vernizes','Plásticos e Borrachas','Petroquímica',
 const ESTADOS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
 
 export default function ClientesPage() {
+  const router = useRouter()
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState(false)
@@ -76,13 +78,13 @@ export default function ClientesPage() {
           <tbody>
             {filtered.length === 0 && <tr><td colSpan={8} className="text-center text-slate-400 py-8">Nenhum cliente encontrado</td></tr>}
             {filtered.map(c => (
-              <tr key={c.id}>
+              <tr key={c.id} className="cursor-pointer hover:bg-blue-50/40 transition-colors" onClick={() => router.push(`/clientes/${c.id}`)}>
                 <td>
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                       {c.razao_social.charAt(0)}
                     </div>
-                    <span className="font-medium text-slate-800">{c.razao_social}</span>
+                    <span className="font-medium text-slate-800 hover:text-blue-600">{c.razao_social}</span>
                   </div>
                 </td>
                 <td className="font-mono text-xs text-slate-500">{c.cnpj}</td>
@@ -91,11 +93,11 @@ export default function ClientesPage() {
                 <td className="text-slate-500 text-sm">{c.cidade}/{c.estado}</td>
                 <td className="text-right font-semibold text-slate-700">R$ {(c.limite_credito/1000).toFixed(0)}k</td>
                 <td><span className={cn('badge', c.status === 'ativo' ? 'badge-green' : 'badge-red')}>{c.status}</span></td>
-                <td>
+                <td onClick={e => e.stopPropagation()}>
                   <div className="flex gap-1 justify-end">
-                    <a href={`/clientes/${c.id}`} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Ver detalhes 360°"><Users size={14}/></a>
-                    <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors"><Pencil size={14}/></button>
-                    <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
+                    <button onClick={e => { e.stopPropagation(); router.push(`/clientes/${c.id}`) }} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Ver detalhes 360°"><Eye size={14}/></button>
+                    <button onClick={e => { e.stopPropagation(); openEdit(c) }} className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors"><Pencil size={14}/></button>
+                    <button onClick={e => { e.stopPropagation(); setDeleteId(c.id) }} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
                   </div>
                 </td>
               </tr>

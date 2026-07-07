@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Calculator, DollarSign, TrendingUp, Save, FileDown, RefreshCw, AlertCircle, Search, ChevronDown, Info } from 'lucide-react'
+import { Calculator, DollarSign, TrendingUp, Save, FileDown, RefreshCw, AlertCircle, Search, ChevronDown, Info, Globe, Loader2, Sparkles } from 'lucide-react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { saveData, loadData, genId } from '@/lib/storage'
 
@@ -85,6 +85,8 @@ export default function CalculadoraImportacaoPage() {
   const [despachante, setDespachante] = useState(4200)
   const [siscomex, setSiscomex] = useState(185)
   const [antiDumpingManual, setAntiDumpingManual] = useState<number | null>(null)
+  const [buscandoInternet, setBuscandoInternet] = useState(false)
+  const [resultadoBusca, setResultadoBusca] = useState<string | null>(null)
 
   const [cambio, setCambio] = useState<Record<string, number>>({ USD: 5.05, EUR: 5.55, CNY: 0.72 })
   const [cambioManual, setCambioManual] = useState(false)
@@ -162,6 +164,42 @@ export default function CalculadoraImportacaoPage() {
     const margem = preco_venda > 0 ? ((preco_venda - custo_unitario) / preco_venda) * 100 : 0
 
     setCalc({ va, ii, anti_dumping: antiDumping, ipi, pis, cofins, icms, afrmm, siscomex: Number(siscomex), frete_interno: freteInterno, despachante, total, custo_unitario, preco_venda, margem })
+  }
+
+  async function buscarNaInternet(nomeProduto: string) {
+    if (!nomeProduto.trim()) return
+    setBuscandoInternet(true)
+    setResultadoBusca(null)
+    try {
+      const prompt = `Você é especialista em comércio exterior brasileiro. Para o produto "${nomeProduto}", responda APENAS com um JSON no formato:
+{"ncm":"0000.00.00","ii":0,"ipi":0,"descricao":"descrição técnica resumida","observacao":"observação sobre anti-dumping ou restrições se houver"}
+Baseie-se na Tabela TEC/TIPI brasileira vigente. Retorne somente o JSON, sem texto adicional.`
+      const res = await fetch('/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: prompt }] }),
+      })
+      const data = await res.json()
+      const texto = data.message || data.content || ''
+      const jsonMatch = texto.match(/\{[\s\S]*?\}/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        if (parsed.ncm) setNcmCustom(parsed.ncm)
+        if (typeof parsed.ii === 'number') setIiCustom(parsed.ii)
+        if (typeof parsed.ipi === 'number') setIpiCustom(parsed.ipi)
+        setNomeProdutoCustom(nomeProduto)
+        setProduto(PRODUTOS_CATALOGO[PRODUTOS_CATALOGO.length - 1]) // seleciona Personalizado
+        const obs = parsed.observacao ? ` · ${parsed.observacao}` : ''
+        setResultadoBusca(`✅ NCM ${parsed.ncm} · II ${parsed.ii}% · IPI ${parsed.ipi}%${obs}`)
+        setShowProdutos(false)
+      } else {
+        setResultadoBusca('Não foi possível identificar o NCM automaticamente. Preencha manualmente.')
+      }
+    } catch {
+      setResultadoBusca('Erro ao consultar. Verifique a conexão e tente novamente.')
+    } finally {
+      setBuscandoInternet(false)
+    }
   }
 
   function salvarSimulacao() {
@@ -314,7 +352,7 @@ export default function CalculadoraImportacaoPage() {
                     className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-cyan-300 focus:border-transparent outline-none"
                   />
                   {showProdutos && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 z-50 max-h-56 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl border border-slate-100 z-50 max-h-64 overflow-y-auto">
                       {produtosFiltrados.map(p => (
                         <button key={p.nome} onClick={() => { setProduto(p); setBuscaProduto(''); setShowProdutos(false) }}
                           className="w-full text-left px-4 py-2.5 hover:bg-slate-50 border-b border-slate-50 last:border-0 transition-colors">
@@ -322,11 +360,33 @@ export default function CalculadoraImportacaoPage() {
                           <p className="text-[10px] text-slate-400">{p.ncm ? `NCM ${p.ncm} · II ${p.ii_base}% · IPI ${p.ipi}%` : 'Informe NCM manualmente'} {p.descricao ? `· ${p.descricao}` : ''}</p>
                         </button>
                       ))}
+                      {buscaProduto.length >= 3 && (
+                        <button
+                          onClick={() => buscarNaInternet(buscaProduto)}
+                          disabled={buscandoInternet}
+                          className="w-full text-left px-4 py-2.5 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border-t border-blue-100 transition-colors flex items-center gap-2"
+                        >
+                          {buscandoInternet
+                            ? <><Loader2 size={13} className="text-blue-500 animate-spin"/><span className="text-xs text-blue-600">Consultando alíquotas...</span></>
+                            : <><Globe size={13} className="text-blue-500"/><span className="text-xs text-blue-700 font-medium">Buscar "{buscaProduto}" na internet (NCM + alíquotas)</span><Sparkles size={11} className="text-cyan-400 ml-auto"/></>
+                          }
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
                 {produto.descricao && !isCustom && (
                   <p className="text-[10px] text-slate-400 mt-1 ml-1">📋 {produto.descricao} · NCM {produto.ncm}</p>
+                )}
+                {resultadoBusca && (
+                  <p className={cn('text-[10px] mt-1 ml-1 font-medium', resultadoBusca.startsWith('✅') ? 'text-emerald-600' : 'text-amber-600')}>
+                    {resultadoBusca}
+                  </p>
+                )}
+                {buscandoInternet && !showProdutos && (
+                  <p className="text-[10px] text-blue-500 mt-1 ml-1 flex items-center gap-1">
+                    <Loader2 size={10} className="animate-spin"/>Consultando alíquotas na internet...
+                  </p>
                 )}
               </div>
 
