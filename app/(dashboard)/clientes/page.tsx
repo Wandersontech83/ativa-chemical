@@ -93,6 +93,7 @@ export default function ClientesPage() {
                 <td><span className={cn('badge', c.status === 'ativo' ? 'badge-green' : 'badge-red')}>{c.status}</span></td>
                 <td>
                   <div className="flex gap-1 justify-end">
+                    <a href={`/clientes/${c.id}`} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Ver detalhes 360°"><Users size={14}/></a>
                     <button onClick={() => openEdit(c)} className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-colors"><Pencil size={14}/></button>
                     <button onClick={() => setDeleteId(c.id)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button>
                   </div>

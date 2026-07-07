@@ -11,12 +11,14 @@ import {
   ChevronRight, Bot, LogOut, Zap, DollarSign, BarChart3,
   Globe, Bell, Ship, Wallet, CreditCard, LineChart, AlertTriangle,
   MapPin, UserCheck, Calculator, Target, ShieldCheck, SearchCheck, CalendarDays,
+  Sunrise, Kanban,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 const navSections = [
   {
     items: [
+      { href: '/meu-dia',                 icon: Sunrise,         label: 'Meu Dia',             roles: ['admin','gestor','analista','vendedor'] },
       { href: '/dashboard',              icon: LayoutDashboard, label: 'Dashboard',           roles: ['admin','gestor','analista','vendedor'] },
       { href: '/executivo',              icon: BarChart3,       label: 'Painel Executivo',    roles: ['admin','gestor'] },
       { href: '/alertas',                icon: Bell,            label: 'Alertas Inteligentes',roles: ['admin','gestor','analista'], badge: true },
@@ -37,6 +39,7 @@ const navSections = [
     items: [
       { href: '/mapa',                   icon: MapPin,          label: 'Mapa de Clientes',    roles: ['admin','gestor','analista','vendedor'] },
       { href: '/agenda',                 icon: CalendarDays,    label: 'Agenda de Visitas',   roles: ['admin','gestor','analista','vendedor'] },
+      { href: '/negocios',               icon: Kanban,          label: 'Pipeline de Negócios',roles: ['admin','gestor','analista','vendedor'] },
       { href: '/vendedores',             icon: UserCheck,       label: 'Vendedores',          roles: ['admin','gestor'] },
       { href: '/prospeccao',             icon: Target,          label: 'Prospecção',          roles: ['admin','gestor','analista','vendedor'] },
       { href: '/crm/propostas',          icon: TrendingUp,      label: 'Propostas',           roles: ['admin','gestor','analista','vendedor'] },
