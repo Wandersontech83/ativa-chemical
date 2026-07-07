@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Calendar, Plus, Check, X, Clock, MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, Bell } from 'lucide-react'
+import { Calendar, Plus, Check, X, Clock, MapPin, Phone, MessageCircle, ChevronLeft, ChevronRight, Bell, Mail, Send, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { loadData, saveData, genId } from '@/lib/storage'
 import { CLIENTES_SEED } from '@/lib/clientes-seed'
@@ -55,6 +55,7 @@ export default function AgendaPage() {
   const [filtroVendedor, setFiltroVendedor] = useState('todos')
   const [semanaOffset, setSemanaOffset] = useState(0)
   const [editando, setEditando] = useState<Visita | null>(null)
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
 
   const clientes = loadData('clientes_geo', CLIENTES_SEED)
 
@@ -67,7 +68,29 @@ export default function AgendaPage() {
     observacoes: '',
   })
 
-  function salvarVisita() {
+  async function enviarLembrete(visitasList: Visita[], tipo: 'confirmacao' | 'resumo_dia') {
+    setEnviandoEmail(true)
+    try {
+      const res = await fetch('/api/agenda/lembrete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visitas: visitasList, tipo }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (data.tip) toast.error(`E-mail não configurado: ${data.tip}`)
+        else toast.error(`Erro ao enviar: ${data.error}`)
+      } else {
+        toast.success('📧 Lembrete enviado para seu e-mail!')
+      }
+    } catch {
+      toast.error('Falha de conexão ao enviar e-mail')
+    } finally {
+      setEnviandoEmail(false)
+    }
+  }
+
+  async function salvarVisita() {
     if (!form.cliente_id || !form.data || !form.hora || !form.objetivo?.trim()) {
       toast.error('Preencha cliente, data, hora e objetivo')
       return
@@ -96,6 +119,10 @@ export default function AgendaPage() {
     setForm({ data: hoje(), hora: '09:00', status: 'agendada', lembrete: true, objetivo: '', observacoes: '' })
     setTab('lista')
     toast.success(editando ? 'Visita atualizada!' : 'Visita agendada!')
+    // Envia lembrete se marcado
+    if (novaVisita.lembrete && novaVisita.status === 'agendada') {
+      await enviarLembrete([novaVisita], 'confirmacao')
+    }
   }
 
   function alterarStatus(id: string, status: StatusVisita) {
@@ -153,6 +180,20 @@ export default function AgendaPage() {
           <p className="text-slate-500 text-sm mt-0.5">{proximas.length} visita{proximas.length !== 1 ? 's' : ''} agendada{proximas.length !== 1 ? 's' : ''}{atrasadas.length > 0 && <span className="ml-2 text-amber-600 font-semibold">· {atrasadas.length} atrasada{atrasadas.length !== 1 ? 's' : ''}</span>}</p>
         </div>
         <div className="flex gap-2">
+          {(() => {
+            const visitasHoje = visitas.filter(v => v.data === hoje() && v.status === 'agendada')
+            return visitasHoje.length > 0 ? (
+              <button
+                onClick={() => enviarLembrete(visitasHoje, 'resumo_dia')}
+                disabled={enviandoEmail}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                title="Enviar resumo das visitas de hoje para seu e-mail"
+              >
+                {enviandoEmail ? <Loader2 size={14} className="animate-spin"/> : <Mail size={14}/>}
+                Resumo hoje
+              </button>
+            ) : null
+          })()}
           <button onClick={() => { setTab('lista') }}
             className={cn('px-4 py-2 rounded-xl text-sm font-semibold transition-all', tab === 'lista' ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50')}>
             Lista
@@ -239,7 +280,7 @@ export default function AgendaPage() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.lembrete ?? true} onChange={e => setForm(f => ({ ...f, lembrete: e.target.checked }))}
                   className="w-4 h-4 rounded" />
-                <span className="text-sm text-slate-600">Ativar lembrete (alerta no dashboard)</span>
+                <span className="text-sm text-slate-600">Ativar lembrete <span className="text-slate-400">(envia e-mail de confirmação ao agendar)</span></span>
               </label>
             </div>
           </div>
