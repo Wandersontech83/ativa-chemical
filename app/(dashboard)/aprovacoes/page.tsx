@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { formatCurrency, cn } from '@/lib/utils'
-import { CheckCircle, XCircle, Clock, ShoppingCart, Truck, MessageSquare, Loader2 } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, ShoppingCart, Truck, MessageSquare, Loader2, ScrollText } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData } from '@/lib/storage'
 import { SEED_FORNECEDORES } from '@/lib/seeds'
@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 
 interface ItemAprov {
   id: string
-  tipo: 'OC' | 'PV'
+  tipo: 'OC' | 'PV' | 'CT'
   numero: string
   descricao: string // fornecedor ou cliente
   valor: number
@@ -40,6 +40,7 @@ export default function AprovacoesPage() {
     ]
     const compras = loadData('compras', SEED_COMPRAS_DEFAULT) as any[]
     const pedidos = loadData('pedidos', SEED_PEDIDOS_DEFAULT) as any[]
+    const contratos = loadData('contratos', []) as any[]
 
     const ocs: ItemAprov[] = compras
       .filter((c:any) => c.status === 'aguardando_aprovacao')
@@ -59,41 +60,101 @@ export default function AprovacoesPage() {
         observacoes: p.observacoes,
       }))
 
-    setItens([...ocs, ...pvs])
+    const cts: ItemAprov[] = contratos
+      .filter((c:any) => c.status === 'aguardando_aprovacao')
+      .map((c:any) => ({
+        id: c.id, tipo: 'CT' as const, numero: c.numero,
+        descricao: c.parte + (c.titulo ? ` — ${c.titulo}` : ''),
+        valor: (c.valor_mensal || 0) * (c.meses || 1),
+        data: c.inicio, solicitante: c.responsavel || 'Gestor',
+        observacoes: c.objeto || '',
+      }))
+
+    setItens([...ocs, ...pvs, ...cts])
   }, [])
 
   const aprovar = async () => {
     if (!decision) return
     setSalvando(true)
     const { item, acao } = decision
-    const novoStatus = acao === 'aprovar' ? 'confirmado' : 'reprovado'
+    const novoStatus = acao === 'aprovar' ? 'aprovado' : 'reprovado'
     const aprovacao = { aprovador: 'Ana Rodrigues (Gestor)', data: new Date().toLocaleDateString('pt-BR'), comentario }
+
+    let compraAprovada: any = null
 
     if (item.tipo === 'OC') {
       const compras = loadData('compras', []) as any[]
-      saveData('compras', compras.map((c:any) => c.id===item.id ? {...c, status: novoStatus, aprovacao} : c))
+      const updatedCompras = compras.map((c:any) => {
+        if (c.id === item.id) {
+          compraAprovada = { ...c, status: novoStatus, aprovacao }
+          return compraAprovada
+        }
+        return c
+      })
+      saveData('compras', updatedCompras)
+    } else if (item.tipo === 'CT') {
+      const contratos = loadData('contratos', []) as any[]
+      const statusContrato = acao === 'aprovar' ? 'ativo' : 'suspenso'
+      saveData('contratos', contratos.map((c:any) => c.id === item.id ? { ...c, status: statusContrato, aprovacao } : c))
     } else {
       const pedidos = loadData('pedidos', []) as any[]
       saveData('pedidos', pedidos.map((p:any) => p.id===item.id ? {...p, status: novoStatus, aprovacao} : p))
     }
 
-    // notificar solicitante (best-effort)
-    try {
-      await fetch('/api/aprovacao/notificar', {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ tipo: item.tipo+'_resultado', numero: item.numero, acao, comentario }),
-      })
-    } catch {}
+    // Envia PDF por e-mail ao aprovar OC
+    if (acao === 'aprovar' && item.tipo === 'OC' && compraAprovada) {
+      try {
+        const { gerarPDFCompra } = await import('@/lib/pdf')
+        const fornList = loadData('fornecedores', []) as any[]
+        const forn = fornList.find((f:any) => f.id === compraAprovada.fornecedor_id)
+        const contato = compraAprovada.contato_id
+          ? forn?.contatos?.find((c:any) => c.id === compraAprovada.contato_id)
+          : (forn?.contatos?.find((c:any) => c.principal) ?? forn?.contatos?.[0])
+
+        const pdf_base64 = await gerarPDFCompra({
+          ...compraAprovada,
+          fornecedor_email: contato?.email ?? compraAprovada.fornecedor_email,
+          fornecedor_cnpj: forn?.cnpj,
+          fornecedor_telefone: contato?.telefone ?? forn?.telefone,
+          fornecedor_cidade: forn?.cidade,
+          fornecedor_pais: forn?.pais,
+          fornecedor_contato_nome: contato?.nome ?? forn?.contato,
+          fornecedor_contato_cargo: contato?.cargo,
+        }, 'base64') as string
+
+        await fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            numero: compraAprovada.numero,
+            fornecedor: compraAprovada.fornecedor,
+            valor_total: compraAprovada.valor_total,
+            moeda: compraAprovada.moeda,
+            cambio: compraAprovada.cambio,
+            data: compraAprovada.data,
+            forma_pagamento: compraAprovada.forma_pagamento,
+            pdf_base64,
+          }),
+        })
+        toast.success(`${item.numero} aprovado! PDF enviado por e-mail.`)
+      } catch (err) {
+        console.error('[aprovacao] Erro ao enviar e-mail:', err)
+        toast.success(`${item.numero} aprovado!`)
+        toast.error('Não foi possível enviar o e-mail. Verifique a chave Resend.')
+      }
+    } else {
+      toast.success(acao==='aprovar' ? `${item.numero} aprovado!` : `${item.numero} reprovado.`)
+    }
 
     setItens(prev => prev.filter(i => i.id !== item.id))
     setDecision(null)
     setComentario('')
     setSalvando(false)
-    toast.success(acao==='aprovar' ? `${item.numero} aprovado!` : `${item.numero} reprovado.`)
   }
 
   const ocs = itens.filter(i => i.tipo === 'OC')
   const pvs = itens.filter(i => i.tipo === 'PV')
+  const cts = itens.filter(i => i.tipo === 'CT')
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -130,6 +191,18 @@ export default function AprovacoesPage() {
           </div>
           <div className="grid gap-3">
             {pvs.map(item => <AprovCard key={item.id} item={item} onDecide={setDecision}/>)}
+          </div>
+        </section>
+      )}
+
+      {cts.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <ScrollText size={16} className="text-violet-500"/>
+            <h2 className="font-semibold text-slate-700">Contratos ({cts.length})</h2>
+          </div>
+          <div className="grid gap-3">
+            {cts.map(item => <AprovCard key={item.id} item={item} onDecide={setDecision}/>)}
           </div>
         </section>
       )}
@@ -174,7 +247,7 @@ function AprovCard({ item, onDecide }: { item: ItemAprov; onDecide: (d:{item:Ite
           </div>
           <p className="font-semibold text-slate-800 text-sm truncate">{item.descricao}</p>
           <p className="text-xs text-slate-400 mt-0.5">
-            {item.tipo==='OC'?'Fornecedor':'Cliente'} · {new Date(item.data+'T12:00').toLocaleDateString('pt-BR')}
+            {item.tipo==='OC'?'Fornecedor':item.tipo==='CT'?'Contrato':'Cliente'} · {new Date(item.data+'T12:00').toLocaleDateString('pt-BR')}
           </p>
           {item.observacoes && <p className="text-xs text-slate-500 mt-1 italic">"{item.observacoes}"</p>}
         </div>
