@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Plus, Search, Pencil, Trash2, Ship, Package, CheckCircle, Clock, AlertTriangle } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Ship, Package, CheckCircle, Clock, AlertTriangle, Copy } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData, genId } from '@/lib/storage'
 
@@ -112,10 +112,17 @@ export default function ImportacaoPage() {
   const save = (list: Importacao[]) => { setImportacoes(list); saveData('importacoes', list) }
 
   const openCreate = () => {
-    const n = `IMP-${new Date().getFullYear()}-${String(importacoes.length + 1).padStart(3, '0')}`
+    const nums = importacoes.map(i => { const m = i.numero.match(/(\d+)$/); return m ? parseInt(m[1]) : 0 })
+    const n = `IMP-${new Date().getFullYear()}-${String(Math.max(0, ...nums) + 1).padStart(3, '0')}`
     setEditing(null); setForm({ ...EMPTY, numero: n }); setModal(true)
   }
   const openEdit = (imp: Importacao) => { setEditing(imp); setForm({ ...imp }); setModal(true) }
+
+  const duplicar = (imp: Importacao) => {
+    const nums = importacoes.map(x => { const m = x.numero.match(/(\d+)$/); return m ? parseInt(m[1]) : 0 })
+    const n = `IMP-${new Date().getFullYear()}-${String(Math.max(0, ...nums) + 1).padStart(3, '0')}`
+    setEditing(null); setForm({ ...imp, numero: n, status: 'pedido' }); setModal(true)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -188,6 +195,7 @@ export default function ImportacaoPage() {
                     <td><span className={cn('text-xs font-semibold px-1.5 py-0.5 rounded-full', cc.color)}>{cc.label}</span></td>
                     <td>
                       <div className="flex gap-1">
+                        <button onClick={e => { e.stopPropagation(); duplicar(imp) }} title="Duplicar" className="p-1 rounded text-slate-400 hover:text-violet-600"><Copy size={13} /></button>
                         <button onClick={e => { e.stopPropagation(); openEdit(imp) }} className="p-1 rounded text-slate-400 hover:text-cyan-600"><Pencil size={13} /></button>
                         <button onClick={e => { e.stopPropagation(); setDeleteId(imp.id) }} className="p-1 rounded text-slate-400 hover:text-red-600"><Trash2 size={13} /></button>
                       </div>
@@ -231,7 +239,7 @@ export default function ImportacaoPage() {
       <Modal open={modal} onClose={() => setModal(false)} title={editing ? 'Editar Processo' : 'Novo Processo de Importação'} size="xl">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-3 gap-3">
-            <div><label className="form-label">Nº do Processo</label><input value={form.numero} onChange={f('numero')} className="form-input" required /></div>
+            <div><label className="form-label">Nº do Processo <span className="text-xs text-slate-400 font-normal">(gerado automaticamente)</span></label><input value={form.numero} readOnly className="form-input bg-slate-50 text-slate-500 cursor-not-allowed" required /></div>
             <div><label className="form-label">Status</label>
               <select value={form.status} onChange={f('status')} className="form-input">
                 {Object.entries(STATUS_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
