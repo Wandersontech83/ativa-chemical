@@ -5,6 +5,7 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { CheckCircle, XCircle, Clock, ShoppingCart, Truck, MessageSquare, Loader2 } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData } from '@/lib/storage'
+import { SEED_FORNECEDORES } from '@/lib/seeds'
 import { toast } from 'sonner'
 
 interface ItemAprov {
@@ -25,8 +26,20 @@ export default function AprovacoesPage() {
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
-    const compras = loadData('compras', []) as any[]
-    const pedidos = loadData('pedidos', []) as any[]
+    // Seeds como fallback para garantir que dados apareçam mesmo sem visitar outras páginas
+    const SEED_COMPRAS_DEFAULT = [
+      { id:'cmp-001', numero:'OC-2026-001', fornecedor:'Hunan Chemical Co. Ltd', data:'2026-06-01', valor_total:56000, status:'recebido', observacoes:'' },
+      { id:'cmp-002', numero:'OC-2026-002', fornecedor:'GZ Poly Materials', data:'2026-06-15', valor_total:51450, status:'aguardando_aprovacao', observacoes:'' },
+      { id:'cmp-003', numero:'OC-2026-003', fornecedor:'Quimibras Ind. Ltda', data:'2026-07-01', valor_total:13500, status:'aprovado', observacoes:'' },
+    ]
+    const SEED_PEDIDOS_DEFAULT = [
+      { id:'ped-001', numero:'PV-2026-001', cliente:'Nordeste Química Ltda', data:'2026-06-01', valor_total:3400, status:'entregue', observacoes:'' },
+      { id:'ped-002', numero:'PV-2026-002', cliente:'IndTex Plásticos SA', data:'2026-06-10', valor_total:14900, status:'expedido', observacoes:'' },
+      { id:'ped-003', numero:'PV-2026-003', cliente:'PetroSul Derivados', data:'2026-06-18', valor_total:5600, status:'confirmado', observacoes:'' },
+      { id:'ped-004', numero:'PV-2026-004', cliente:'Fab Têxtil Nordeste', data:'2026-07-01', valor_total:4300, status:'pendente', observacoes:'' },
+    ]
+    const compras = loadData('compras', SEED_COMPRAS_DEFAULT) as any[]
+    const pedidos = loadData('pedidos', SEED_PEDIDOS_DEFAULT) as any[]
 
     const ocs: ItemAprov[] = compras
       .filter((c:any) => c.status === 'aguardando_aprovacao')

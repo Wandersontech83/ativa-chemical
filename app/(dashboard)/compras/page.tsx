@@ -10,6 +10,7 @@ import {
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData, genId } from '@/lib/storage'
 import { CONDICOES_PAGAMENTO } from '@/lib/payment-conditions'
+import { SEED_FORNECEDORES, SEED_PRODUTOS } from '@/lib/seeds'
 import { toast } from 'sonner'
 
 interface Fornecedor { id: string; nome: string; categoria: string; moeda: string; prazo_entrega: number; email: string; contato: string }
@@ -81,8 +82,8 @@ export default function ComprasPage() {
   const [showProdList, setShowProdList] = useState<Record<string,boolean>>({})
   const fornRef = useRef<HTMLDivElement>(null)
 
-  const fornecedores: Fornecedor[] = loadData('fornecedores', [])
-  const produtos: ProdutoCat[]     = loadData('produtos', [])
+  const fornecedores: Fornecedor[] = loadData('fornecedores', SEED_FORNECEDORES)
+  const produtos: ProdutoCat[]     = loadData('produtos', SEED_PRODUTOS)
 
   useEffect(() => { setCompras(loadData('compras', SEED_COMPRAS)) }, [])
 

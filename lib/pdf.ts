@@ -3,37 +3,71 @@ import autoTable from 'jspdf-autotable'
 
 const BRAND = { primary: [6, 182, 212] as [number, number, number], dark: [12, 24, 41] as [number, number, number], accent: [37, 99, 235] as [number, number, number] }
 
-function drawHeader(doc: jsPDF, titulo: string, numero: string) {
+async function getLogoDataUrl(): Promise<string | null> {
+  if (typeof window === 'undefined') return null
+  try {
+    const res = await fetch('/logo.svg')
+    const svgText = await res.text()
+    const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve()
+      img.onerror = reject
+      img.src = url
+    })
+    const canvas = document.createElement('canvas')
+    canvas.width = 480
+    canvas.height = 120
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, 0, 0, 480, 120)
+    URL.revokeObjectURL(url)
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  }
+}
+
+async function drawHeader(doc: jsPDF, titulo: string, numero: string) {
   // Fundo escuro no topo
   doc.setFillColor(...BRAND.dark)
-  doc.rect(0, 0, 210, 32, 'F')
+  doc.rect(0, 0, 210, 36, 'F')
 
-  // Nome da empresa
-  doc.setTextColor(255, 255, 255)
-  doc.setFontSize(16)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Ativa Chemical', 14, 13)
+  // Logo (tenta carregar; fallback para texto)
+  try {
+    const logoData = await getLogoDataUrl()
+    if (logoData) {
+      doc.addImage(logoData, 'PNG', 10, 4, 52, 13)
+    } else {
+      throw new Error('no logo')
+    }
+  } catch {
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(15)
+    doc.setFont('helvetica', 'bold')
+    doc.text('Ativa Chemical', 14, 13)
+  }
 
   // Subtítulo empresa
-  doc.setFontSize(7)
+  doc.setFontSize(6.5)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(148, 163, 184)
-  doc.text('DISTRIBUIÇÃO DE PRODUTOS QUÍMICOS INDUSTRIAIS', 14, 19)
-  doc.text('comercial@ativachemical.com.br  |  (11) 3000-0000', 14, 24)
+  doc.text('DISTRIBUIÇÃO DE PRODUTOS QUÍMICOS INDUSTRIAIS', 14, 23)
+  doc.text('comercial@ativachemical.com.br  |  (11) 3000-0000', 14, 28)
 
   // Título do documento (direita)
   doc.setTextColor(6, 182, 212)
-  doc.setFontSize(14)
+  doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
-  doc.text(titulo, 196, 13, { align: 'right' })
+  doc.text(titulo, 196, 14, { align: 'right' })
   doc.setFontSize(9)
   doc.setTextColor(255, 255, 255)
-  doc.text(numero, 196, 20, { align: 'right' })
+  doc.text(numero, 196, 22, { align: 'right' })
 
-  // Linha gradiente decorativa
+  // Linha decorativa
   doc.setDrawColor(...BRAND.primary)
   doc.setLineWidth(0.8)
-  doc.line(0, 32, 210, 32)
+  doc.line(0, 36, 210, 36)
 }
 
 function drawFooter(doc: jsPDF) {
@@ -78,15 +112,15 @@ function infoBlock(doc: jsPDF, y: number, left: { title: string; lines: string[]
   return y + 8 + left.lines.length * 5.5
 }
 
-export function gerarPDFProposta(proposta: {
+export async function gerarPDFProposta(proposta: {
   numero: string; cliente: string; data: string; validade: string
   status: string; itens: { produto: string; quantidade: number; preco_unitario: number }[]
   observacoes: string; responsavel: string
 }) {
   const doc = new jsPDF()
-  drawHeader(doc, 'PROPOSTA COMERCIAL', proposta.numero)
+  await drawHeader(doc, 'PROPOSTA COMERCIAL', proposta.numero)
 
-  let y = 40
+  let y = 44
   doc.setFontSize(8)
   doc.setTextColor(100, 116, 139)
   doc.setFont('helvetica', 'normal')
@@ -148,15 +182,15 @@ export function gerarPDFProposta(proposta: {
   doc.save(`${proposta.numero}.pdf`)
 }
 
-export function gerarPDFPedido(pedido: {
+export async function gerarPDFPedido(pedido: {
   numero: string; cliente: string; data: string; prazo_entrega: string
   status: string; itens: { produto: string; quantidade: number; preco_unitario: number }[]
   forma_pagamento: string; observacoes: string
 }) {
   const doc = new jsPDF()
-  drawHeader(doc, 'PEDIDO DE VENDA', pedido.numero)
+  await drawHeader(doc, 'PEDIDO DE VENDA', pedido.numero)
 
-  let y = 40
+  let y = 44
   y = infoBlock(doc, y,
     { title: 'CLIENTE / DESTINO', lines: [pedido.cliente] },
     {
@@ -214,17 +248,17 @@ export function gerarPDFPedido(pedido: {
   doc.save(`${pedido.numero}.pdf`)
 }
 
-export function gerarPDFCompra(compra: {
+export async function gerarPDFCompra(compra: {
   numero: string; fornecedor: string; data: string; previsao_entrega: string
   categoria: string; descricao: string; valor_total: number
   moeda: string; cambio: number; forma_pagamento: string; status: string
 }) {
   const doc = new jsPDF()
-  drawHeader(doc, 'ORDEM DE COMPRA', compra.numero)
+  await drawHeader(doc, 'ORDEM DE COMPRA', compra.numero)
 
   const valorBRL = compra.moeda === 'BRL' ? compra.valor_total : compra.valor_total * compra.cambio
 
-  let y = 40
+  let y = 44
   y = infoBlock(doc, y,
     { title: 'FORNECEDOR', lines: [compra.fornecedor, `Categoria: ${compra.categoria}`] },
     {

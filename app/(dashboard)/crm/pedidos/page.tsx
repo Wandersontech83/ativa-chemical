@@ -9,6 +9,7 @@ import {
 import Modal from '@/components/ui/Modal'
 import { loadData, saveData, genId } from '@/lib/storage'
 import { CONDICOES_PAGAMENTO } from '@/lib/payment-conditions'
+import { SEED_PRODUTOS } from '@/lib/seeds'
 import { toast } from 'sonner'
 
 interface Cliente { id: string; razao_social: string; cnpj: string; email: string; contato: string }
@@ -76,7 +77,7 @@ export default function PedidosPage() {
   const cliRef = useRef<HTMLDivElement>(null)
 
   const clientes: Cliente[] = loadData('clientes', [])
-  const produtos: ProdutoCat[] = loadData('produtos', [])
+  const produtos: ProdutoCat[] = loadData('produtos', SEED_PRODUTOS)
 
   useEffect(() => { setPedidos(loadData('pedidos', SEED)) }, [])
   useEffect(() => {

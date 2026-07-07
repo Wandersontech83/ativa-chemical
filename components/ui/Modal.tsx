@@ -23,13 +23,14 @@ export default function Modal({ open, onClose, title, children, size = 'md' }: M
   const widths = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 py-6" onClick={onClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className={`relative w-full ${widths[size]} bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]`}
+        className={`relative w-full ${widths[size]} bg-white rounded-2xl shadow-2xl flex flex-col my-auto`}
+        style={{ maxHeight: 'calc(100vh - 3rem)' }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0 sticky top-0 bg-white rounded-t-2xl z-10">
           <h3 className="text-lg font-bold text-slate-800">{title}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
             <X size={18} />

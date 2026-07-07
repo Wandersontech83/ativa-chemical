@@ -24,7 +24,7 @@ interface AcaoExecutada {
 }
 
 interface PendingFlow {
-  tipo: 'agendar_visita' | 'criar_negocio' | 'criar_lembrete' | 'criar_proposta'
+  tipo: 'agendar_visita' | 'criar_negocio' | 'criar_lembrete' | 'criar_proposta' | 'criar_cliente' | 'criar_oc_flow'
   step: number
   data: Record<string, any>
 }
@@ -244,16 +244,18 @@ export default function AgentChat() {
     const t = q.toLowerCase()
     if (/agendar\s*(visita|reunião|encontro)/.test(t) || t.includes('marcar visita')) return 'agendar_visita'
     if (/criar\s*proposta|nova\s*proposta|proposta\s*para/.test(t)) return 'criar_proposta'
-    if (/criar\s*pedido|novo\s*pedido|pedido\s*de\s*venda|emitir\s*pedido/.test(t)) return 'criar_pedido'
+    if (/criar\s*pedido|novo\s*pedido|pedido\s*de\s*venda|emitir\s*pedido|gerar\s*pedido/.test(t)) return 'nav_pedidos'
     if (/criar?\s*lembrete|lembrar\s*de|criar\s*tarefa|follow.?up/.test(t)) return 'criar_lembrete'
     if (/criar?\s*negócio|novo\s*negócio|abrir\s*negócio/.test(t)) return 'criar_negocio'
     if (/abrir\s*mapa|ver\s*mapa|mapa\s*de\s*clientes/.test(t)) return 'nav_mapa'
     if (/abrir\s*agenda|ver\s*agenda/.test(t)) return 'nav_agenda'
     if (/pipeline|negócios|kanban/.test(t)) return 'nav_negocios'
     if (/meu\s*dia|hub|roteiro\s*de\s*hoje/.test(t)) return 'nav_meudia'
-    if (/cadastrar?\s*cliente|novo\s*cliente|criar?\s*cliente/.test(t)) return 'nav_clientes'
+    if (/cadastrar?\s*cliente|novo\s*cliente|criar?\s*cliente|criar\s*cadastro\s*de\s*cliente/.test(t)) return 'criar_cliente_flow'
     if (/abrir\s*fornecedores?|ver\s*fornecedores?/.test(t)) return 'nav_fornecedores'
-    if (/ordem\s*de\s*compra|criar\s*oc|nova\s*oc/.test(t)) return 'criar_oc'
+    if (/consultar?\s*estoque|ver\s*estoque|abrir\s*estoque|saldo\s*estoque/.test(t)) return 'nav_estoque'
+    if (/abrir\s*compras?|ver\s*compras?|ordem\s*de\s*compra|criar\s*oc|nova\s*oc/.test(t)) return 'nav_compras'
+    if (/aprovaç|painel\s*de\s*aprovação/.test(t)) return 'nav_aprovacoes'
     return ''
   }
 
@@ -368,6 +370,35 @@ export default function AgentChat() {
       }
     }
 
+    if (flow.tipo === 'criar_cliente') {
+      if (flow.step === 1) {
+        return {
+          msg: `✅ **${resposta}** registrado. Qual o **CNPJ** do cliente? (ou "pular" para deixar em branco)`,
+          proximoFlow: { ...flow, step: 2, data: { ...flow.data, nome: resposta } }
+        }
+      }
+      if (flow.step === 2) {
+        const cnpj = t === 'pular' ? '' : resposta
+        return {
+          msg: `Qual o **e-mail** de contato? (ou "pular")`,
+          proximoFlow: { ...flow, step: 3, data: { ...flow.data, cnpj } }
+        }
+      }
+      if (flow.step === 3) {
+        const email = t === 'pular' ? '' : resposta
+        try {
+          const lista = loadData('clientes', [])
+          const novo = { id: genId('cli'), razao_social: flow.data.nome, cnpj: flow.data.cnpj, email, contato:'', telefone:'', cidade:'', estado:'', status:'ativo', segmento:'', criado_em: hoje() }
+          saveData('clientes', [novo, ...lista])
+        } catch {}
+        return {
+          msg: `✅ **Cliente cadastrado com sucesso!**\n\n• **Razão Social:** ${flow.data.nome}\n• **CNPJ:** ${flow.data.cnpj || '—'}\n• **E-mail:** ${email || '—'}\n\nAcesse a tela de **Clientes** para completar o cadastro.`,
+          acao: { tipo: 'cliente', label: 'Cliente cadastrado', href: '/clientes' },
+          proximoFlow: null,
+        }
+      }
+    }
+
     return { msg: 'Não entendi. Pode reformular?', proximoFlow: flow }
   }
 
@@ -376,12 +407,15 @@ export default function AgentChat() {
   function iniciarAcao(intencao: string): { resposta: string; acao?: AcaoExecutada; novoFlow?: PendingFlow | null } | null {
     // Navegações simples
     const navs: Record<string, [string, string, string]> = {
-      nav_mapa:        ['🗺️', 'Abrindo Mapa de Clientes...', '/mapa'],
-      nav_agenda:      ['📅', 'Abrindo Agenda de Visitas...', '/agenda'],
-      nav_negocios:    ['📊', 'Abrindo Pipeline de Negócios...', '/negocios'],
-      nav_meudia:      ['🌅', 'Abrindo Meu Dia...', '/meu-dia'],
-      nav_clientes:    ['👥', 'Abrindo Clientes para cadastro...', '/clientes'],
-      nav_fornecedores:['🏭', 'Abrindo Fornecedores...', '/fornecedores'],
+      nav_mapa:        ['🗺️', 'Abrindo Mapa de Clientes...',      '/mapa'],
+      nav_agenda:      ['📅', 'Abrindo Agenda de Visitas...',      '/agenda'],
+      nav_negocios:    ['📊', 'Abrindo Pipeline de Negócios...',   '/negocios'],
+      nav_meudia:      ['🌅', 'Abrindo Meu Dia...',               '/meu-dia'],
+      nav_fornecedores:['🏭', 'Abrindo Fornecedores...',          '/fornecedores'],
+      nav_estoque:     ['📦', 'Abrindo Estoque...',               '/estoque'],
+      nav_compras:     ['🛒', 'Abrindo Ordens de Compra...',      '/compras'],
+      nav_pedidos:     ['📋', 'Abrindo Pedidos de Venda...',      '/crm/pedidos'],
+      nav_aprovacoes:  ['✅', 'Abrindo Painel de Aprovações...',   '/aprovacoes'],
     }
     if (navs[intencao]) {
       const [emoji, msg, href] = navs[intencao]
@@ -396,6 +430,9 @@ export default function AgentChat() {
     }
     if (intencao === 'criar_negocio') {
       return { resposta: '📊 Vou criar um negócio no pipeline. **Para qual cliente?**', novoFlow: { tipo: 'criar_negocio', step: 1, data: {} } }
+    }
+    if (intencao === 'criar_cliente_flow') {
+      return { resposta: '👤 Vou cadastrar um novo cliente. **Qual o nome / Razão Social?**', novoFlow: { tipo: 'criar_cliente', step: 1, data: {} } }
     }
     return null
   }
@@ -452,6 +489,17 @@ export default function AgentChat() {
     setLoading(true)
 
     try {
+      // 0. Cancelamento explícito de fluxo
+      const tLower = msg.toLowerCase()
+      if (pendingFlow && /^(cancelar|cancel|sair|pare|stop|abortar|desistir|voltar|não quero)/.test(tLower)) {
+        setPendingFlow(null)
+        setTimeout(() => {
+          setMessages(prev => [...prev, { role: 'assistant', content: '↩️ Ação cancelada. Como posso ajudar?' }])
+          setLoading(false)
+        }, 200)
+        return
+      }
+
       // 1. Continuar fluxo multi-passo se existir
       if (pendingFlow) {
         const { msg: resp, acao, proximoFlow } = continuarFluxo(pendingFlow, msg)
