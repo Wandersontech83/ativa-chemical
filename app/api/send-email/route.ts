@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'wanderson.tech83@gmail.com'
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Ativa Chemical <onboarding@resend.dev>'
 
@@ -14,6 +12,8 @@ export async function POST(req: NextRequest) {
       console.warn('[send-email] RESEND_API_KEY não configurado — e-mail não enviado')
       return NextResponse.json({ ok: false, error: 'RESEND_API_KEY não configurado' }, { status: 200 })
     }
+
+    const resend = new Resend(process.env.RESEND_API_KEY)
 
     const valorBRL = moeda === 'BRL' ? valor_total : valor_total * cambio
     const valorFormatado = valorBRL.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
